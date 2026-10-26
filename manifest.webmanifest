@@ -1,0 +1,16 @@
+{
+  "name": "Zlatni puls – provedba projekta",
+  "short_name": "Zlatni puls",
+  "description": "Provedba aktivnosti, komunikacija i vidljivost, prijave na aktivnosti – radi i bez interneta.",
+  "lang": "hr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f5ef",
+  "theme_color": "#0f2f6b",
+  "icons": [
+    { "src": "ikona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "ikona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

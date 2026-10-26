@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f2f6b">
+<meta name="robots" content="noindex, nofollow">
+<title>Zlatni puls</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="ikona-192.png">
+<link rel="apple-touch-icon" href="ikona-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <div class="lijevo">
+      <img class="logo" src="logo.jpg" alt="Zlatni puls">
+      <div><h1>Zlatni puls</h1><div class="sub" id="podnaslov">Provedba projekta</div></div>
+    </div>
+    <button class="mreza" id="mreza" type="button">…</button>
+  </div>
+  <div class="gold-rule"></div>
+</header>
+
+<main class="wrap" id="app"><div class="spinner"></div></main>
+
+<footer class="vid wrap"><img src="traka.png" alt="Sufinancira Europska unija – Europski socijalni fond plus"></footer>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="provedba" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Provedba</button>
+  <button data-tab="vidljivost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg>Vidljivost</button>
+  <button data-tab="prijave" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 11h6M19 8v6"/></svg>Prijave</button>
+  <button data-tab="slanje" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>Slanje<span class="badge hidden" id="badge">0</span></button>
+</nav>
+
+<script src="sync.js"></script>
+<script src="scanner.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
