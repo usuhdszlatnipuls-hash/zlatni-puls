@@ -3,7 +3,7 @@
    Provedba aktivnosti · Komunikacija i vidljivost · Prijave na aktivnosti
    Sve se sprema na mobitel i šalje na Drive kad ima interneta.
    ═══════════════════════════════════════════════════════════════════════ */
-var VERZIJA_APP = '2026-10-26a';
+var VERZIJA_APP = '2026-10-26b';
 var DANI = ['nedjelja', 'ponedjeljak', 'utorak', 'srijeda', 'četvrtak', 'petak', 'subota'];
 var MJ = ['siječanj', 'veljača', 'ožujak', 'travanj', 'svibanj', 'lipanj', 'srpanj', 'kolovoz', 'rujan', 'listopad', 'studeni', 'prosinac'];
 var MJ_GEN = ['siječnja', 'veljače', 'ožujka', 'travnja', 'svibnja', 'lipnja', 'srpnja', 'kolovoza', 'rujna', 'listopada', 'studenoga', 'prosinca'];
@@ -94,15 +94,77 @@ function thumbnail(file) {
     return c.toDataURL('image/jpeg', .7);
   }).catch(function () { return ''; });
 }
+/** Fotografija: najviše 1920 px po duljoj strani, JPEG 80 % (obično 0,3–0,8 MB umjesto 3–8 MB). */
+var FOTO_MAX_PX = 1920, FOTO_KVALITETA = 0.8;
 function smanjiFoto(file) {
-  if (file.size <= MAX_FOTO_ORIGINAL && /jpe?g/i.test(file.type)) return Promise.resolve({ blob: file, mime: 'image/jpeg', ext: 'jpg' });
-  return createImageBitmap(file).then(function (bmp) {
-    var k = Math.min(1, 3000 / Math.max(bmp.width, bmp.height));
+  if (file.size <= 700 * 1024 && /jpe?g/i.test(file.type)) return Promise.resolve({ blob: file, mime: 'image/jpeg', ext: 'jpg' });
+  return createImageBitmap(file, { imageOrientation: 'from-image' }).then(function (bmp) {
+    var k = Math.min(1, FOTO_MAX_PX / Math.max(bmp.width, bmp.height));
     var c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-    return new Promise(function (res) { c.toBlob(function (b) { res({ blob: b, mime: 'image/jpeg', ext: 'jpg' }); }, 'image/jpeg', .9); });
+    var x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(bmp, 0, 0, c.width, c.height);
+    if (bmp.close) bmp.close();
+    return new Promise(function (res) {
+      c.toBlob(function (b) { res(b && b.size < file.size ? { blob: b, mime: 'image/jpeg', ext: 'jpg' } : { blob: file, mime: file.type || 'image/jpeg', ext: ekstenzija(file, 'jpg') }); }, 'image/jpeg', FOTO_KVALITETA);
+    });
   });
 }
+
+/** Video: 720p (najviše 1280 px po duljoj strani), ~1,8 Mbit/s, MP4 – oko 13 MB po minuti.
+ *  Radi na mobitelu (WebCodecs, hardversko kodiranje). Ako preglednik ne može, šalje se original. */
+var VIDEO_MAX_PX = 1280, VIDEO_BITRATE = 1800000, AUDIO_BITRATE = 96000;
+function smanjiVideo(file, naNapredak) {
+  var MB = window.Mediabunny;
+  var original = { blob: file, mime: file.type || 'video/mp4', ext: ekstenzija(file, 'mp4'), smanjeno: false };
+  if (!MB || typeof VideoEncoder === 'undefined' || file.size < 8 * 1024 * 1024) return Promise.resolve(original);
+  var input, conv;
+  var aac = MB.canEncodeAudio ? MB.canEncodeAudio('aac').catch(function () { return false; }) : Promise.resolve(false);
+  var avc = MB.canEncodeVideo ? MB.canEncodeVideo('avc').catch(function () { return false; }) : Promise.resolve(false);
+  return Promise.all([aac, avc]).then(function (mog) {
+    var imaAac = mog[0], imaAvc = mog[1];
+    var audioOpcije = { bitrate: AUDIO_BITRATE };
+    if (imaAac) audioOpcije.codec = 'aac';        // AAC se reproducira svugdje (Windows, iPhone, e-Kohezija)
+    input = new MB.Input({ formats: MB.ALL_FORMATS, source: new MB.BlobSource(file) });
+    var output = new MB.Output({ format: new MB.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new MB.BufferTarget() });
+    return MB.Conversion.init({
+      input: input, output: output, showWarnings: false,
+      video: function (track) {
+        var w = track.displayWidth, h = track.displayHeight, o = { bitrate: VIDEO_BITRATE, forceTranscode: true };
+        if (imaAvc) o.codec = 'avc';              // H.264 – reproducira se na svakom računalu i mobitelu
+        if (Math.max(w, h) > VIDEO_MAX_PX) { if (w >= h) o.width = VIDEO_MAX_PX; else o.height = VIDEO_MAX_PX; }
+        return o;
+      },
+      audio: audioOpcije
+    }).then(function (c) {
+      conv = c;
+      if (!c.isValid) throw new Error('pretvorba nije moguća');
+      c.onProgress = function (p) { if (naNapredak) naNapredak(p); };
+      return c.execute();
+    }).then(function () {
+      var buf = output.target.buffer;
+      if (!buf || buf.byteLength < 1000 || buf.byteLength >= file.size * 0.9) return original;
+      var b = new Blob([buf], { type: 'video/mp4' });
+      return { blob: b, mime: 'video/mp4', ext: 'mp4', smanjeno: true };
+    });
+  }).catch(function (e) { console.warn('Video nije smanjen:', e); return original; })
+    .then(function (r) { try { input && input.dispose && input.dispose(); } catch (e) {} return r; });
+}
+
+/** Obrada jedna po jedna (štedi memoriju mobitela) uz traku napretka na dnu zaslona. */
+S.obrada = Promise.resolve(); S.uObradi = 0;
+function uObradu(opis, posao) {
+  S.uObradi++; trakaObrade(opis, 0);
+  var p = S.obrada.then(function () { trakaObrade(opis, 0); return posao(function (x) { trakaObrade(opis, x); }); });
+  S.obrada = p.catch(function () {}).then(function () { S.uObradi--; trakaObrade(); });
+  return p;
+}
+function trakaObrade(opis, x) {
+  var el = $('#obradaTraka');
+  if (!S.uObradi || !opis) { if (el && !S.uObradi) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'obradaTraka'; el.className = 'obradaTraka'; document.body.appendChild(el); }
+  el.innerHTML = '<b>' + esc(opis) + (S.uObradi > 1 ? ' (još ' + (S.uObradi - 1) + ')' : '') + '</b> ' + (x ? Math.round(x * 100) + ' %' : '') +
+    '<div class="bar"><i style="width:' + Math.round((x || 0) * 100) + '%"></i></div>';
+}
+
 function trajanjeVidea(file) {
   return new Promise(function (res) {
     var v = document.createElement('video'); v.preload = 'metadata'; v.muted = true;
@@ -361,27 +423,55 @@ function akcijaTermina(t, akc) {
 }
 function primiFotografije(t, files) {
   files.forEach(function (f) {
-    Promise.all([thumbnail(f), smanjiFoto(f)]).then(function (r) {
-      return ZP.uRed({ tip: 'datoteka', termin: t, vrsta: 'foto', ime: f.name || 'fotografija.jpg', blob: r[1].blob, mime: r[1].mime, ext: r[1].ext, velicina: r[1].blob.size, thumb: r[0] });
+    uObradu('Smanjujem fotografiju', function () {
+      return Promise.all([thumbnail(f), smanjiFoto(f)]).then(function (r) {
+        return ZP.uRed({ tip: 'datoteka', termin: t, vrsta: 'foto', ime: f.name || 'fotografija.jpg', blob: r[1].blob, mime: r[1].mime, ext: r[1].ext, velicina: r[1].blob.size, thumb: r[0] });
+      });
     }).catch(function () { toast('Slika se ne može pročitati: ' + f.name); });
   });
 }
 function primiVideo(t, files) {
   files.forEach(function (f) {
-    trajanjeVidea(f).then(function (sek) {
-      if (sek > 65 && !confirm('Video traje ' + Math.round(sek) + ' s, a traži se video do 1 minute. Ipak spremiti?')) return;
-      return ZP.uRed({ tip: 'datoteka', termin: t, vrsta: 'video', ime: f.name || 'video', blob: f, mime: f.type || 'video/mp4', ext: ekstenzija(f, 'mp4'), velicina: f.size });
+    uObradu('Smanjujem video', function (napredak) {
+      return smanjiVideo(f, napredak).then(function (v) {
+        return ZP.uRed({ tip: 'datoteka', termin: t, vrsta: 'video', ime: f.name || 'video', blob: v.blob, mime: v.mime, ext: v.ext, velicina: v.blob.size });
+      }).then(function (q) { return q; });
     }).catch(greska);
   });
 }
+/** Potpisna lista: fotografija se automatski obreže, izravna, pretvori u „sken” i spremi kao PDF – bez dodatnih koraka.
+ *  Više slika odjednom (iz galerije) = jedan PDF s više stranica. */
 function primiListe(t, files) {
   var slike = [], pdf = [];
   files.forEach(function (f) { (f.type === 'application/pdf' || /\.pdf$/i.test(f.name) ? pdf : slike).push(f); });
   pdf.forEach(function (f) { ZP.uRed({ tip: 'datoteka', termin: t, vrsta: 'potpisna', ime: f.name, blob: f, mime: 'application/pdf', ext: 'pdf', velicina: f.size }); });
-  if (slike.length) otvoriUredjivac(slike, function (blob, thumb) {
-    ZP.uRed({ tip: 'datoteka', termin: t, vrsta: 'potpisna', ime: 'Potpisna lista (PDF)', blob: blob, mime: 'application/pdf', ext: 'pdf', velicina: blob.size, thumb: thumb })
-      .then(function () { toast('Potpisna lista spremljena. Osobe s liste upišite u kartici Prijave.', 4000); });
-  });
+  if (!slike.length) return;
+  uObradu('Pretvaram potpisnu listu u PDF', function (napredak) {
+    return autoSkenPdf(slike, napredak).then(function (r) {
+      return ZP.uRed({ tip: 'datoteka', termin: t, vrsta: 'potpisna', ime: 'Potpisna lista (PDF, ' + slike.length + ' str.)', blob: r.blob, mime: 'application/pdf', ext: 'pdf', velicina: r.blob.size, thumb: r.thumb });
+    });
+  }).then(function () { toast('Potpisna lista spremljena kao PDF.', 3000); }).catch(greska);
+}
+function autoSkenPdf(slike, napredak) {
+  var stranice = [], thumb = '';
+  var i = 0;
+  var sljedeca = function () {
+    if (i >= slike.length) return Promise.resolve();
+    var f = slike[i];
+    return createImageBitmap(f, { imageOrientation: 'from-image' }).then(function (bmp) {
+      var k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
+      var c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      if (bmp.close) bmp.close();
+      return new Promise(function (r) { setTimeout(r, 20); }).then(function () {
+        var ravna = izravnaj(c, nadjiKutove(c));
+        var sken = obradi(ravna, 'sken');
+        if (!thumb) { var tc = document.createElement('canvas'), kk = 120 / sken.height; tc.width = Math.round(sken.width * kk); tc.height = 120; tc.getContext('2d').drawImage(sken, 0, 0, tc.width, tc.height); thumb = tc.toDataURL('image/jpeg', .7); }
+        return new Promise(function (res) { sken.toBlob(function (bl) { bl.arrayBuffer().then(function (ab) { res({ jpeg: new Uint8Array(ab), w: sken.width, h: sken.height }); }); }, 'image/jpeg', .78); });
+      });
+    }).then(function (st) { stranice.push(st); i++; napredak(i / slike.length); return sljedeca(); });
+  };
+  return sljedeca().then(function () { return { blob: napraviPdf(stranice), thumb: thumb }; });
 }
 
 /* ═══ GLASOVNI UNOS (diktiranje na hrvatskom; bez mreže – snimka glasa) ═══ */
@@ -532,10 +622,12 @@ function noviVidljivost() {
   function dio(s) { return String(s || '').trim().replace(/[\\\/:*?"<>|#%\[\]]+/g, '').replace(/\s+/g, '_').slice(0, 60); }
   function dodajDokaz(files) {
     files.forEach(function (f) {
-      var slika = /^image\//.test(f.type);
-      Promise.all([thumbnail(f), slika ? smanjiFoto(f) : Promise.resolve({ blob: f, mime: f.type || 'application/octet-stream', ext: ekstenzija(f, 'bin') })]).then(function (r) {
-        V.datoteke.push({ ime: f.name, blob: r[1].blob, mime: r[1].mime, ext: r[1].ext, velicina: r[1].blob.size, thumb: r[0] });
-        crtajDokaze();
+      var slika = /^image\//.test(f.type), video = /^video\//.test(f.type);
+      uObradu(video ? 'Smanjujem video' : slika ? 'Smanjujem fotografiju' : 'Pripremam datoteku', function (napredak) {
+        return Promise.all([thumbnail(f), slika ? smanjiFoto(f) : video ? smanjiVideo(f, napredak) : Promise.resolve({ blob: f, mime: f.type || 'application/octet-stream', ext: ekstenzija(f, 'bin') })]).then(function (r) {
+          V.datoteke.push({ ime: f.name, blob: r[1].blob, mime: r[1].mime, ext: r[1].ext, velicina: r[1].blob.size, thumb: r[0] });
+          if (S.vid === V) crtajDokaze();
+        });
       });
     });
   }
@@ -556,6 +648,7 @@ function noviVidljivost() {
 
 function spremiVidljivost() {
   var V = S.vid;
+  if (S.uObradi) { toast('Pričekajte – još smanjujem priložene datoteke…'); S.obrada.then(function () { if (S.vid === V) spremiVidljivost(); }); return; }
   if (!V.kategorija) { toast('Odaberite vrstu (npr. Društvene mreže, Plakati…).'); return; }
   var glasovi = Object.keys(S.snimke).map(function (k) { return S.snimke[k]; });
   if (!V.datoteke.length && !glasovi.length && !V.poveznica && !confirm('Niste priložili nijedan dokaz (snimku zaslona, fotografiju). Ipak spremiti?')) return;
