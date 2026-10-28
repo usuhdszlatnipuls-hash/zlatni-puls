@@ -208,3 +208,14 @@
   .obradaTraka { position: fixed; left: 12px; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 60; background: var(--navy); color: #fff;
     border-radius: 12px; padding: 10px 14px; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.25); max-width: 596px; margin: 0 auto; }
   .obradaTraka .bar { background: rgba(255,255,255,.2); margin-top: 6px; }
+
+  /* klikabilni brojači vidljivosti */
+  button.cilj { width: 100%; background: none; border: 0; border-top: 1px solid #f0ede4; text-align: left; cursor: pointer; color: inherit; border-radius: 8px; }
+  #vCilj h3 + button.cilj { border-top: 0; }
+  button.cilj b { display: inline-flex; align-items: center; gap: 4px; color: var(--navy); }
+  button.cilj b svg { width: 16px; height: 16px; color: var(--muted); }
+  button.cilj:hover, button.cilj:focus-visible { background: var(--gold-soft); outline: none; }
+  /* povlačenje datoteka s računala (drag & drop) */
+  .drop-on { outline: 3px dashed var(--gold); outline-offset: 2px; background: var(--gold-soft) !important; }
+  .savjet-drop { margin: 8px 0 0; }
+  @media (hover: none) and (pointer: coarse) { .savjet-drop { display: none; } }

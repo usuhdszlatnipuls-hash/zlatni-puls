@@ -1,5 +1,5 @@
 /* Zlatni puls · service worker: aplikacija radi bez interneta, red se šalje kad se mreža vrati. */
-var VERZIJA = 'zp-2026-10-26c';
+var VERZIJA = 'zp-2026-10-28a';
 var DATOTEKE = ['./', './index.html', './styles.css', './app.js', './sync.js', './scanner.js', './mediabunny.min.js', './manifest.webmanifest',
   './ikona-192.png', './ikona-512.png', './logo.jpg', './traka.png'];
 

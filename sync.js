@@ -156,9 +156,10 @@ ZP.predaj = function (q, folderId, naziv, blob, mime, cid, napredakFn) {
 ZP.obradi = function (q) {
   if (q.tip === 'datoteka') {
     return ZP.mapaTermina(q.termin).then(function (m) {
-      var pot = q.vrsta === 'potpisna';
+      var pot = q.vrsta === 'potpisna', nap = q.vrsta === 'napomena';   // nap = privitak napomene: Napomena_<mapa>_01.ext …
+      var prefiks = pot ? m.prefiksPotpisne : nap ? 'Napomena_' + (m.nazivMape || m.prefiks) : m.prefiks;
       var naziv = q.naziv ? Promise.resolve(q.naziv) :
-        ZP.api('rezervirajNaziv', m.folderId, pot ? m.prefiksPotpisne : m.prefiks, pot ? 'potpisna' : 'media', q.ext).then(function (n) { q.naziv = n; return ZP.redSpremi(q).then(function () { return n; }); });
+        ZP.api('rezervirajNaziv', m.folderId, prefiks, pot ? 'potpisna' : nap ? 'napomena' : 'media', q.ext).then(function (n) { q.naziv = n; return ZP.redSpremi(q).then(function () { return n; }); });
       return naziv.then(function (n) {
         return ZP.predaj(q, m.folderId, n, q.blob, q.mime, q.cid, function (p) { ZP.napredak(q, p); });
       }).then(function (r) {

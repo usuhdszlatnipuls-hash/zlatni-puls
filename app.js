@@ -3,7 +3,7 @@
    Provedba aktivnosti · Komunikacija i vidljivost · Prijave na aktivnosti
    Sve se sprema na mobitel i šalje na Drive kad ima interneta.
    ═══════════════════════════════════════════════════════════════════════ */
-var VERZIJA_APP = '2026-10-26b';
+var VERZIJA_APP = '2026-10-28a';
 var DANI = ['nedjelja', 'ponedjeljak', 'utorak', 'srijeda', 'četvrtak', 'petak', 'subota'];
 var MJ = ['siječanj', 'veljača', 'ožujak', 'travanj', 'svibanj', 'lipanj', 'srpanj', 'kolovoz', 'rujan', 'listopad', 'studeni', 'prosinac'];
 var MJ_GEN = ['siječnja', 'veljače', 'ožujka', 'travnja', 'svibnja', 'lipnja', 'srpnja', 'kolovoza', 'rujna', 'listopada', 'studenoga', 'prosinca'];
@@ -17,7 +17,7 @@ var KATEGORIJE = [
   { id: 'web_esf', naziv: 'Web – objava ESF+', dulje: 'Web – objava o potpori ESF+', kanali: ['Web'], cilj: 1 },
   { id: 'web', naziv: 'Web stranica', dulje: 'Web stranica (ostale objave)', kanali: ['Web'], cilj: 0 },
   { id: 'plakati', naziv: 'Plakati (min. A2)', dulje: 'Plakati (min. A2)', kanali: ['Plakat'], cilj: 50, brojKomada: true },
-  { id: 'letci', naziv: 'Letci', dulje: 'Letci', kanali: ['Letak'], cilj: 0, brojKomada: true },
+  { id: 'letci', naziv: 'Letci', dulje: 'Letci', kanali: ['Letak'], cilj: 2500, brojKomada: true, obavezanBroj: true },
   { id: 'vanjsko', naziv: 'Jumbo / city light', dulje: 'Vanjsko oglašavanje (jumbo plakat / city light)', kanali: ['Jumbo plakat', 'City light'], cilj: 3 },
   { id: 'mediji', naziv: 'Mediji i portali', dulje: 'Mediji – PR članci i portali', kanali: ['Portal', 'Novine', 'Radio', 'TV'], cilj: 0 },
   { id: 'rollup', naziv: 'Roll-up banner', dulje: 'Roll-up banner', kanali: ['Roll-up'], cilj: 1 },
@@ -85,6 +85,45 @@ function odaberi(accept, kamera, vise, cb) {
   inp.onchange = function () { var f = Array.prototype.slice.call(inp.files || []); inp.remove(); if (f.length) cb(f); };
   inp.click();
 }
+
+/* ─── DRAG & DROP i LIJEPLJENJE (Ctrl+V) datoteka s računala ─── */
+function vrijemeOznaka() { var d = new Date(); return ymd(d) + '_' + pad(d.getHours()) + '-' + pad(d.getMinutes()) + '-' + pad(d.getSeconds()); }
+/** Slike iz međuspremnika dobivaju naziv Screenshot_<datum-vrijeme>.png (ili .jpg). */
+function datotekeIzMedjuspremnika(cd) {
+  var out = [], oznaka = vrijemeOznaka();
+  Array.prototype.slice.call((cd && cd.items) || []).forEach(function (it) {
+    if (it.kind !== 'file') return;
+    var f = it.getAsFile(); if (!f) return;
+    if (/^image\//.test(f.type)) {
+      var ext = /jpe?g/i.test(f.type) ? 'jpg' : (f.type.split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '').slice(0, 4);
+      var ime = 'Screenshot_' + oznaka + (out.length ? '_' + (out.length + 1) : '') + '.' + ext;
+      try { f = new File([f], ime, { type: f.type, lastModified: Date.now() }); } catch (e) { f.name2 = ime; }
+    }
+    out.push(f);
+  });
+  if (!out.length && cd && cd.files && cd.files.length) out = Array.prototype.slice.call(cd.files);
+  return out;
+}
+function imaDatoteka(e) { var t = e.dataTransfer && e.dataTransfer.types; return !!t && Array.prototype.indexOf.call(t, 'Files') >= 0; }
+/** Zona za ispuštanje: el dobiva obrub dok se datoteka vuče iznad nje; cb(files) prima ispuštene datoteke. */
+function zonaIspustanja(el, cb) {
+  if (!el) return;
+  var dubina = 0;
+  el.addEventListener('dragenter', function (e) { if (!imaDatoteka(e)) return; e.preventDefault(); dubina++; el.classList.add('drop-on'); });
+  el.addEventListener('dragover', function (e) { if (!imaDatoteka(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  el.addEventListener('dragleave', function () { dubina = Math.max(0, dubina - 1); if (!dubina) el.classList.remove('drop-on'); });
+  el.addEventListener('drop', function (e) {
+    if (!imaDatoteka(e)) return;
+    e.preventDefault(); e.stopPropagation(); dubina = 0; el.classList.remove('drop-on');
+    var f = Array.prototype.slice.call(e.dataTransfer.files || []);
+    if (f.length) cb(f);
+  });
+}
+function jeSlika(f) { return /^image\//.test(f.type || '') || /\.(jpe?g|png|gif|webp|heic|bmp)$/i.test(f.name || ''); }
+function jeVideo(f) { return /^video\//.test(f.type || '') || /\.(mp4|mov|webm|3gp|m4v|avi|mkv)$/i.test(f.name || ''); }
+function jePdf(f) { return f.type === 'application/pdf' || /\.pdf$/i.test(f.name || ''); }
+var SAVJET_ISPUSTANJA = '<p class="muted small savjet-drop">Na računalu: povucite datoteke ovamo ili zalijepite snimku zaslona (Ctrl+V).</p>';
+
 function thumbnail(file) {
   if (!/^image\//.test(file.type || '')) return Promise.resolve('');
   return createImageBitmap(file).then(function (bmp) {
@@ -207,6 +246,12 @@ function postaviTab(tab) {
   $('#podnaslov').textContent = { provedba: 'Provedba aktivnosti', vidljivost: 'Komunikacija i vidljivost', prijave: 'Prijave na aktivnosti', slanje: 'Slanje i postavke' }[tab];
   window.scrollTo(0, 0);
   ({ provedba: pocetnaProvedba, vidljivost: pocetnaVidljivost, prijave: pocetnaPrijave, slanje: pocetnaSlanje })[tab]();
+}
+/** Kamo idu datoteke ispuštene/zalijepljene izvan zona: otvoreni termin ili novi element vidljivosti. */
+function ciljUmetanja() {
+  if (S.tab === 'provedba' && S.termin && $('#tSadrzaj')) { var t = S.termin; return function (f, uNap) { rasporediUTermin(t, f, uNap); }; }
+  if (S.tab === 'vidljivost' && S.vid && S.vid.dodajDokaz && $('#vDat')) { var V = S.vid; return function (f) { V.dodajDokaz(f); toast('Dodano u dokaz: ' + f.length + '.'); }; }
+  return null;
 }
 function osvjeziStanjeMreze() {
   ZP.redSvi().then(function (svi) {
@@ -333,13 +378,13 @@ function crtajTermin(t) {
       else if (!naMrezi()) html += '<div class="obavijest warn">Nema interneta – sve što dodate sprema se na mobitel i šalje se samo čim se spojite. Mapa na Driveu stvorit će se automatski.</div>';
       var fb = s.fotografije + cekaV('foto');
       html += sekcija('foto', I.foto, 'Fotografije', 'Potrebno 2–4 fotografije', '<span class="brojac ' + (fb >= 2 ? 'ok' : '') + '">' + fb + ' / 4</span>',
-        '<button class="btn primary" data-akc="foto-k">' + I.foto + 'Fotografiraj</button><button class="btn ghost" data-akc="foto-g">' + I.galerija + 'Galerija</button>', vrste('foto'), redV('foto'));
+        '<button class="btn primary" data-akc="foto-k">' + I.foto + 'Fotografiraj</button><button class="btn ghost" data-akc="foto-g">' + I.galerija + 'Galerija</button>', vrste('foto'), redV('foto'), SAVJET_ISPUSTANJA);
       var vb = s.video + cekaV('video');
       html += sekcija('video', I.video, 'Video', 'Jedan video do 1 minute', '<span class="brojac ' + (vb >= 1 ? 'ok' : '') + '">' + vb + ' / 1</span>',
-        '<button class="btn primary" data-akc="video-k">' + I.video + 'Snimi video</button><button class="btn ghost" data-akc="video-g">' + I.galerija + 'Galerija</button>', vrste('video'), redV('video'));
+        '<button class="btn primary" data-akc="video-k">' + I.video + 'Snimi video</button><button class="btn ghost" data-akc="video-g">' + I.galerija + 'Galerija</button>', vrste('video'), redV('video'), SAVJET_ISPUSTANJA);
       var pb = s.potpisne + cekaV('potpisna');
       html += sekcija('potpisna', I.lista, 'Potpisna lista', 'Fotografija se pretvara u PDF; osobe s liste upisuju se u Prijave', '<span class="brojac ' + (pb >= 1 ? 'ok' : '') + '">' + pb + '</span>',
-        '<button class="btn primary" data-akc="lista-k">' + I.foto + 'Fotografiraj</button><button class="btn ghost" data-akc="lista-g">' + I.galerija + 'Slika / PDF</button>', vrste('potpisna'), redV('potpisna'));
+        '<button class="btn primary" data-akc="lista-k">' + I.foto + 'Fotografiraj</button><button class="btn ghost" data-akc="lista-g">' + I.galerija + 'Slika / PDF</button>', vrste('potpisna'), redV('potpisna'), SAVJET_ISPUSTANJA);
       var kal = vrste('kalendar'), izv = vrste('izvjesce');
       html += '<section class="card sekcija"><div class="glava"><span class="ikona">' + I.kal + '</span><div class="t"><h3>Kalendar aktivnosti</h3><div class="muted">Mjesečni kalendar kopira se u mapu automatski</div></div>' +
         '<span class="brojac ' + (s.kalendar || kal.length ? 'ok' : 'warn') + '">' + (s.kalendar || kal.length ? '✓' : 'čeka') + '</span></div>' + popisDatoteka(kal, I.kal) + '</section>';
@@ -347,7 +392,9 @@ function crtajTermin(t) {
         '<span class="brojac ' + (s.izvjesce || izv.length ? 'ok' : 'warn') + '">' + (s.izvjesce || izv.length ? '✓' : 'čeka') + '</span></div>' + popisDatoteka(izv, I.izv) + '</section>';
       html += sekcija('napomena', I.olovka, 'Napomena / obrazloženje', 'Nije obavezno – npr. „aktivnost je provodila koordinatorica umjesto voditelja”', '',
         '', vrste('napomena'), redV('napomena'), '<div class="glas" style="margin-top:10px"><textarea class="unos" id="napTekst" placeholder="Upišite ili izdiktirajte obrazloženje…"></textarea>' + gumbMic('napTekst') + '</div>' +
-        '<div class="btnrow one"><button class="btn gold" id="napSpremi">' + I.olovka + 'Spremi napomenu na obrascu Zlatni puls</button></div>');
+        '<div class="btnrow one"><button class="btn gold" id="napSpremi">' + I.olovka + 'Spremi napomenu na obrascu Zlatni puls</button></div>' +
+        '<div class="btnrow one"><button class="btn ghost" id="napPrivitak">' + I.lista + 'Priloži datoteku uz napomenu</button></div>' +
+        '<p class="muted small">Privitak se sprema u mapu termina kao Napomena_' + esc((mapa && mapa.nazivMape) || '<mapa>') + '_01, _02 … Na računalu ga možete i povući ovamo ili zalijepiti (Ctrl+V) dok pišete napomenu.</p>');
       html += '<div class="btnrow">' + (mapa && mapa.folderUrl ? '<a class="btn ghost" href="' + mapa.folderUrl + '" target="_blank" rel="noopener">' + I.mapa + 'Otvori mapu</a>' : '<span></span>') +
         '<button class="btn ghost" id="naPrijave">Prijave na termin</button></div>' + (mapa ? '<p class="muted small" style="margin-top:14px">Mapa: ' + esc(mapa.putanja || mapa.nazivMape) + '</p>' : '');
       var stariTekst = $('#napTekst') ? $('#napTekst').value : '';
@@ -364,7 +411,38 @@ function crtajTermin(t) {
         ZP.uRed({ tip: 'napomena', termin: t, tekst: tx, ime: 'Napomena: ' + tx.slice(0, 40) }).then(function () { $('#napTekst').value = ''; toast(naMrezi() ? 'Napomena se šalje…' : 'Napomena spremljena na mobitel – poslat će se kad bude interneta.'); });
       };
       $('#naPrijave').onclick = function () { postaviTab('prijave'); otvoriPrijaveTermina(t); };
+      $('#napPrivitak').onclick = function () { odaberi('*/*', false, true, function (f) { primiPrivitkeNapomene(t, f); }); };
+      zonaIspustanja($('#sek-foto'), function (f) { primiFotografije(t, f.filter(jeSlika)); if (f.some(function (x) { return !jeSlika(x); })) toast('U Fotografije idu samo slike.'); });
+      zonaIspustanja($('#sek-video'), function (f) { primiVideo(t, f.filter(jeVideo)); if (f.some(function (x) { return !jeVideo(x); })) toast('U Video idu samo video datoteke.'); });
+      zonaIspustanja($('#sek-potpisna'), function (f) { primiListe(t, f.filter(function (x) { return jeSlika(x) || jePdf(x); })); });
+      zonaIspustanja($('#sek-napomena'), function (f) { primiPrivitkeNapomene(t, f); });
     });
+}
+
+/** Datoteka ispuštena izvan zona ili zalijepljena (Ctrl+V) u otvorenom terminu: slika → Fotografije, video → Video, PDF → Potpisna lista. */
+function rasporediUTermin(t, files, uNapomenu) {
+  if (uNapomenu) { primiPrivitkeNapomene(t, files); return; }
+  var foto = files.filter(jeSlika), vid = files.filter(jeVideo), pdf = files.filter(jePdf);
+  var ostalo = files.filter(function (f) { return !jeSlika(f) && !jeVideo(f) && !jePdf(f); });
+  if (foto.length) primiFotografije(t, foto);
+  if (vid.length) primiVideo(t, vid);
+  if (pdf.length) primiListe(t, pdf);
+  if (ostalo.length) primiPrivitkeNapomene(t, ostalo);
+  toast([foto.length ? foto.length + ' u Fotografije' : '', vid.length ? vid.length + ' u Video' : '', pdf.length ? pdf.length + ' u Potpisnu listu' : '',
+    ostalo.length ? ostalo.length + ' kao privitak napomene' : ''].filter(Boolean).join(', ') + '.', 3500);
+}
+
+/** Privitak uz napomenu: sprema se u mapu termina kao Napomena_<mapa>_01.<ext>, _02 … (bez prepisivanja). */
+function primiPrivitkeNapomene(t, files) {
+  files.forEach(function (f) {
+    uObradu('Pripremam privitak', function () {
+      return thumbnail(f).then(function (th) {
+        return ZP.uRed({ tip: 'datoteka', termin: t, vrsta: 'napomena', ime: 'Privitak napomene: ' + (f.name || 'datoteka'), blob: f,
+          mime: f.type || 'application/octet-stream', ext: ekstenzija(f, 'bin'), velicina: f.size, thumb: th });
+      });
+    }).then(function () { toast(naMrezi() ? 'Privitak napomene se šalje…' : 'Privitak spremljen na mobitel – poslat će se kad bude interneta.'); })
+      .catch(function () { toast('Datoteka se ne može pročitati: ' + f.name); });
+  });
 }
 
 function popisDatoteka(dat, ikona) {
@@ -538,10 +616,13 @@ function pocetnaVidljivost() {
     sKesom('vid_pregled', 'vidljivostPregled', [new Date().getFullYear()]).then(function (p) {
       if (S.tab !== 'vidljivost' || !$('#vCilj')) return;
       $('#vCilj').innerHTML = '<h3>Ciljevi iz prijavnog obrasca (' + new Date().getFullYear() + '.)</h3>' + p.map(function (k) {
-        var post = k.cilj ? Math.min(100, Math.round(k.broj / k.cilj * 100)) : 0;
-        return '<div class="cilj"><span>' + esc(k.naziv) + '</span><b>' + k.broj + (k.cilj ? ' / ' + k.cilj : '') + '</b>' +
-          (k.cilj ? '<div class="bar" style="grid-column:1/3"><i style="width:' + post + '%"></i></div>' : '') + '</div>';
-      }).join('') + '<p class="muted small">Plakati i letci broje se po komadu. Brojke se osvježavaju kad je mobitel na internetu.</p>';
+        var kk = KATEGORIJE.filter(function (x) { return x.id === k.id; })[0];
+        var cilj = Math.max(Number(k.cilj) || 0, kk ? kk.cilj : 0);
+        var post = cilj ? Math.min(100, Math.round(k.broj / cilj * 100)) : 0;
+        return '<button type="button" class="cilj" data-vkat="' + esc(k.id) + '" title="Prikaži spremljene datoteke"><span>' + esc(k.naziv) + '</span><b>' + k.broj + (cilj ? ' / ' + cilj : '') + ' ' + I.desno + '</b>' +
+          (cilj ? '<div class="bar" style="grid-column:1/3"><i style="width:' + post + '%"></i></div>' : '') + '</button>';
+      }).join('') + '<p class="muted small">Dodirnite vrstu za popis spremljenih datoteka. Plakati i letci broje se po komadu. Brojke se osvježavaju kad je mobitel na internetu.</p>';
+      $$('#vCilj [data-vkat]').forEach(function (b) { b.onclick = function () { popisVidljivosti(b.getAttribute('data-vkat'), new Date().getFullYear()); }; });
     }).catch(function (e) { if ($('#vCilj')) $('#vCilj').innerHTML = '<h3>Ciljevi iz prijavnog obrasca</h3><p class="muted">' + esc(e.message) + '</p>'; });
     redZa(function (q) { return q.tip === 'vidljivost'; }).then(function (red) {
       if (!$('#vRed')) return;
@@ -557,6 +638,41 @@ function pocetnaVidljivost() {
   };
   S.osvjezi = crtaj; S.naPromjenuReda = crtaj;
   crtaj();
+}
+
+/** Popis datoteka spremljenih pod vrstom vidljivosti (2. Vidljivost / <vrsta>) – naziv, datum, poveznica na Drive. */
+function popisVidljivosti(katId, godina) {
+  S.naPromjenuReda = null; S.osvjezi = null;
+  var k = KATEGORIJE.filter(function (x) { return x.id === katId; })[0] || { naziv: katId, dulje: katId };
+  $('#app').innerHTML = '<button class="btn link back" id="natrag">' + I.lijevo + 'Natrag</button><h2>' + esc(k.dulje) + '</h2>' +
+    '<div class="mjesec"><button class="iconbtn" id="gPrev" aria-label="Prethodna godina">' + I.lijevo + '</button><b>' + (godina ? godina + '.' : 'Sve godine') + '</b>' +
+    '<button class="iconbtn" id="gNext" aria-label="Sljedeća godina">' + I.desno + '</button></div>' +
+    '<div id="vpSad"><div class="spinner"></div></div>' +
+    '<div class="btnrow one"><button class="btn ghost" id="gSve">' + (godina ? 'Prikaži sve godine' : 'Samo ' + new Date().getFullYear() + '.') + '</button></div>';
+  $('#natrag').onclick = pocetnaVidljivost;
+  var g0 = godina || new Date().getFullYear();
+  $('#gPrev').onclick = function () { popisVidljivosti(katId, g0 - 1); };
+  $('#gNext').onclick = function () { popisVidljivosti(katId, g0 + 1); };
+  $('#gSve').onclick = function () { popisVidljivosti(katId, godina ? 0 : new Date().getFullYear()); };
+  sKesom('vid_dat_' + katId + '_' + (godina || 'sve'), 'vidljivostDatoteke', [katId, godina || 0], true).then(function (r) {
+    if (!$('#vpSad')) return;
+    var dat = r.datoteke || [], zap = r.zapisi || [];
+    var ukupnoKom = zap.reduce(function (s, z) { return s + (Number(z.brojKomada) || 0); }, 0);
+    var html = '<div class="card"><h3>Datoteke (' + dat.length + ')</h3>' + (dat.length ? '<ul class="popis">' + dat.map(function (d) {
+      var ik = /^image\//.test(d.mime || '') ? I.galerija : /^video\//.test(d.mime || '') ? I.video : /pdf/.test(d.mime || '') ? I.lista : I.mapa;
+      return '<li><span class="ph">' + ik + '</span><span class="ime"><a href="' + esc(d.url) + '" target="_blank" rel="noopener">' + esc(d.naziv) + '</a>' +
+        '<br><span class="muted small">' + (d.datum ? esc(lijepDatum(d.datum)) : '') + (d.velicina ? ' · ' + mb(d.velicina) : '') + '</span></span></li>';
+    }).join('') + '</ul>' : '<p class="muted">Pod ovom vrstom još nema spremljenih datoteka' + (godina ? ' za ' + godina + '.' : '') + '.</p>') +
+      (r.folderUrl ? '<div class="btnrow one"><a class="btn ghost" href="' + esc(r.folderUrl) + '" target="_blank" rel="noopener">' + I.mapa + 'Otvori mapu na Driveu</a></div>' : '') +
+      (r.mapa ? '<p class="muted small">Mapa: ' + esc(r.mapa) + '</p>' : '') + '</div>';
+    if (zap.length) html += '<div class="card"><h3>Zapisi u evidenciji (' + zap.length + ')' + (k.brojKomada ? ' · ukupno ' + ukupnoKom + ' kom.' : '') + '</h3><ul class="popis">' + zap.map(function (z) {
+      return '<li><span class="ime"><b>' + (z.datum ? esc(kratkiDatum(z.datum)) : '') + '</b> ' + esc([z.kanal, z.organizacija, z.naslov].filter(Boolean).join(' · ')) +
+        (z.brojKomada ? ' · <b>' + esc(z.brojKomada) + ' kom.</b>' : '') + (z.poveznica ? ' · <a href="' + esc(z.poveznica) + '" target="_blank" rel="noopener">poveznica</a>' : '') + '</span></li>';
+    }).join('') + '</ul></div>';
+    $('#vpSad').innerHTML = html;
+  }).catch(function (e) {
+    if ($('#vpSad')) $('#vpSad').innerHTML = '<div class="obavijest bad">' + esc(/Nepoznata akcija/.test(e.message) ? 'Poslužitelj još nema ovu mogućnost – potrebno je objaviti novu verziju API-ja (Apps Script).' : e.message) + '</div>';
+  });
 }
 
 function noviVidljivost() {
@@ -576,12 +692,12 @@ function noviVidljivost() {
     '<label class="polje" for="vOrg">Gdje / kod koga (organizacija, stranica, mjesto)</label><input class="unos" id="vOrg" list="vOrgL" placeholder="npr. Crveni križ Dugo Selo">' +
     '<datalist id="vOrgL">' + POZNATE_ORG.map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist>' +
     '<label class="polje" for="vNaslov">Naslov (naziv datoteke)</label><input class="unos" id="vNaslov" placeholder="npr. Poziv na prijavu">' +
-    '<div id="vKomadi" class="hidden"><label class="polje" for="vBroj">Broj komada</label><input class="unos" type="number" min="1" id="vBroj"></div>' +
+    '<div id="vKomadi" class="hidden"><label class="polje" for="vBroj" id="vBrojLbl">Broj komada</label><input class="unos" type="number" min="1" id="vBroj"></div>' +
     '<label class="polje" for="vLink">Poveznica (ako postoji)</label><input class="unos" type="url" id="vLink" placeholder="https://…">' +
     '<label class="polje" for="vOpis">Opis</label><div class="glas"><textarea class="unos" id="vOpis"></textarea>' + gumbMic('vOpis', true) + '</div>' +
     '<p class="muted small" id="vNaziv"></p></div>' +
-    '<div class="card sekcija"><div class="glava"><span class="ikona">' + I.galerija + '</span><div class="t"><h3>Dokaz</h3><div class="muted">Snimka zaslona, fotografija plakata, video, PDF</div></div></div>' +
-    '<ul class="popis" id="vDat"></ul><div class="btnrow"><button class="btn primary" id="vKamera">' + I.foto + 'Fotografiraj</button><button class="btn ghost" id="vGalerija">' + I.galerija + 'Galerija</button></div></div>' +
+    '<div class="card sekcija" id="vDokaz"><div class="glava"><span class="ikona">' + I.galerija + '</span><div class="t"><h3>Dokaz</h3><div class="muted">Snimka zaslona, fotografija plakata, video, PDF</div></div></div>' +
+    '<ul class="popis" id="vDat"></ul><div class="btnrow"><button class="btn primary" id="vKamera">' + I.foto + 'Fotografiraj</button><button class="btn ghost" id="vGalerija">' + I.galerija + 'Galerija</button></div>' + SAVJET_ISPUSTANJA + '</div>' +
     '<div class="btnrow one"><button class="btn gold" id="vSpremi">Spremi u Vidljivost</button></div>';
   $('#natrag').onclick = pocetnaVidljivost;
   $('#vDatum').value = V.datum;
@@ -592,6 +708,8 @@ function noviVidljivost() {
   $('#vKamera').onclick = function () { odaberi('image/*', true, false, dodajDokaz); };
   $('#vGalerija').onclick = function () { odaberi('image/*,video/*,application/pdf', false, true, dodajDokaz); };
   $('#vSpremi').onclick = spremiVidljivost;
+  zonaIspustanja($('#vDokaz'), dodajDokaz);
+  V.dodajDokaz = dodajDokaz;
   vezivoMic();
   $('#vGlas').addEventListener('change', crtajDokaze); $('#vOpis').addEventListener('change', crtajDokaze);
 
@@ -602,6 +720,7 @@ function noviVidljivost() {
     $('#vKanali').innerHTML = (k ? k.kanali : []).map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
     if (k && k.kanali.length === 1 && !V.rucno.kanal) { V.kanal = k.kanali[0]; $('#vKanal').value = V.kanal; }
     $('#vKomadi').classList.toggle('hidden', !(k && k.brojKomada));
+    $('#vBrojLbl').textContent = id === 'letci' ? 'Broj podijeljenih letaka (cilj ' + k.cilj + ' godišnje)' : 'Broj komada';
     nazivPregled();
   }
   function postavi(k, v) { if (v == null || v === '' || V.rucno[k]) return; V[k] = v; $(polja[k]).value = v; }
@@ -650,6 +769,8 @@ function spremiVidljivost() {
   var V = S.vid;
   if (S.uObradi) { toast('Pričekajte – još smanjujem priložene datoteke…'); S.obrada.then(function () { if (S.vid === V) spremiVidljivost(); }); return; }
   if (!V.kategorija) { toast('Odaberite vrstu (npr. Društvene mreže, Plakati…).'); return; }
+  var kat = KATEGORIJE.filter(function (x) { return x.id === V.kategorija; })[0];
+  if (kat && kat.obavezanBroj && !(Number(V.brojKomada) > 0)) { toast('Upišite broj podijeljenih letaka.'); if ($('#vBroj')) $('#vBroj').focus(); return; }
   var glasovi = Object.keys(S.snimke).map(function (k) { return S.snimke[k]; });
   if (!V.datoteke.length && !glasovi.length && !V.poveznica && !confirm('Niste priložili nijedan dokaz (snimku zaslona, fotografiju). Ipak spremiti?')) return;
   var dat = V.datoteke.map(function (d) { return { ime: d.ime, blob: d.blob, mime: d.mime, ext: d.ext, velicina: d.velicina }; });
@@ -942,6 +1063,27 @@ function preuzmiPodatke() {
 document.addEventListener('DOMContentLoaded', function () {
   $$('#tabs button').forEach(function (b) { b.onclick = function () { postaviTab(b.getAttribute('data-tab')); }; });
   $('#mreza').onclick = function () { postaviTab('slanje'); };
+  // datoteka ispuštena bilo gdje na stranici: ne otvaraj je u pregledniku nego je dodaj gdje ima smisla
+  document.addEventListener('dragover', function (e) { if (imaDatoteka(e)) { e.preventDefault(); e.dataTransfer.dropEffect = ciljUmetanja() ? 'copy' : 'none'; } });
+  document.addEventListener('drop', function (e) {
+    if (!imaDatoteka(e)) return;
+    e.preventDefault();
+    var f = Array.prototype.slice.call(e.dataTransfer.files || []);
+    var c = ciljUmetanja();
+    if (!f.length) return;
+    if (!c) { toast('Otvorite termin (Provedba) ili novi element vidljivosti pa ispustite datoteku.'); return; }
+    c(f, false);
+  });
+  // Ctrl+V: snimka zaslona (ili kopirana datoteka) iz međuspremnika
+  document.addEventListener('paste', function (e) {
+    var f = datotekeIzMedjuspremnika(e.clipboardData);
+    if (!f.length) return;                       // običan tekst – normalno lijepljenje
+    var c = ciljUmetanja();
+    if (!c) { toast('Otvorite termin (Provedba) ili novi element vidljivosti pa zalijepite sliku.'); return; }
+    e.preventDefault();
+    var uNapomenu = !!(e.target && e.target.closest && e.target.closest('#sek-napomena'));
+    c(f, uNapomenu);
+  });
   window.addEventListener('online', function () { osvjeziStanjeMreze(); ZP.pokreni(); if (S.osvjezi) S.osvjezi(); });
   window.addEventListener('offline', osvjeziStanjeMreze);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) ZP.pokreni(); });
