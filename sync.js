@@ -183,7 +183,7 @@ ZP.obradi = function (q) {
         while (i < dat.length && dat[i].gotovo) i++;
         if (i >= dat.length) return Promise.resolve();
         var d = dat[i];
-        var naziv = d.naziv ? Promise.resolve(d.naziv) : ZP.api('rezervirajNaziv', v.folderId, v.prefiks, 'media', d.ext).then(function (n) { d.naziv = n; return ZP.redSpremi(q).then(function () { return n; }); });
+        var naziv = d.naziv ? Promise.resolve(d.naziv) : ZP.api('rezervirajNaziv', v.folderId, v.prefiks + (d.uloga === 'racun' ? '_Racun' : ''), 'media', d.ext).then(function (n) { d.naziv = n; return ZP.redSpremi(q).then(function () { return n; }); });
         return naziv.then(function (n) {
           return ZP.predaj(q, v.folderId, n, d.blob, d.mime, q.cid + '-' + i, function (p) { ZP.napredak(q, (i + p) / dat.length); });
         }).then(function () { d.gotovo = true; delete d.blob; i++; return ZP.redSpremi(q).then(sljedeca); });
@@ -194,6 +194,10 @@ ZP.obradi = function (q) {
   if (q.tip === 'prijave') {
     q.p.cid = q.cid;
     return ZP.api('dodajPrijave', q.p);
+  }
+  if (q.tip === 'prijavaOsobe') {
+    q.p.cid = q.cid;
+    return ZP.api('prijaviOsobu', q.p);
   }
   return Promise.reject(new Error('Nepoznata vrsta zadatka'));
 };
