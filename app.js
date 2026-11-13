@@ -3,7 +3,7 @@
    Provedba aktivnosti · Komunikacija i vidljivost · Prijave na aktivnosti
    Sve se sprema na mobitel i šalje na Drive kad ima interneta.
    ═══════════════════════════════════════════════════════════════════════ */
-var VERZIJA_APP = '2026-11-13d';
+var VERZIJA_APP = '2026-11-13e';
 var DANI = ['nedjelja', 'ponedjeljak', 'utorak', 'srijeda', 'četvrtak', 'petak', 'subota'];
 var MJ = ['siječanj', 'veljača', 'ožujak', 'travanj', 'svibanj', 'lipanj', 'srpanj', 'kolovoz', 'rujan', 'listopad', 'studeni', 'prosinac'];
 var MJ_GEN = ['siječnja', 'veljače', 'ožujka', 'travnja', 'svibnja', 'lipnja', 'srpnja', 'kolovoza', 'rujna', 'listopada', 'studenoga', 'prosinca'];
@@ -1453,15 +1453,21 @@ function otvoriPrijaveTermina(t) {
 function prijavaOsobe() {
   S.naPromjenuReda = null; S.osvjezi = null; S.prijaveTermin = { kljuc: '_osoba' };
   var sad = new Date();
-  var P = { osoba: null, novi: null, datum: danas(), vrijeme: pad(sad.getHours()) + ':' + pad(sad.getMinutes()), termini: {}, opce: {}, ym: S.prijaveMjesec, lok: '' };
+  var P = { osoba: null, novi: null, datum: danas(), vrijeme: pad(sad.getHours()) + ':' + pad(sad.getMinutes()), termini: {}, opce: {}, ym: S.prijaveMjesec, lok: '', osobne: [] };
   $('#app').innerHTML = '<button class="btn link back" id="natrag">' + I.lijevo + 'Prijave</button><h2>Prijava na aktivnosti</h2>' +
     '<p class="muted small">Osoba iz baze (ili nova), odabrani datum prijave, bez potpisa. Potpisuje se kasnije na mjesečnoj prijavnici.</p>' +
     '<div class="card"><h3>1. Osoba</h3><div class="odabrani" id="poOsoba"></div>' +
     '<input class="unos" id="poTrazi" placeholder="Prezime ili ime…" autocomplete="off"><div id="poRez"></div>' +
     '<details style="margin-top:10px" id="poNovaD"><summary class="small">Osoba nije u bazi – upiši novu</summary>' +
     '<div class="dvoje"><div><input class="unos" id="poIme" placeholder="Ime"></div><div><input class="unos" id="poPrez" placeholder="Prezime"></div></div>' +
-    '<div class="dvoje" style="margin-top:8px"><div><input class="unos" id="poGod" type="number" placeholder="Godina rođenja"></div><div><input class="unos" id="poNas" placeholder="Naselje"></div></div>' +
-    '<div class="btnrow one"><button class="btn ghost" id="poNovaOK">' + I.plus + 'Koristi ovu osobu</button></div></details></div>' +
+    '<div class="dvoje" style="margin-top:8px"><div><input class="unos" id="poDR" inputmode="numeric" placeholder="Datum rođenja (dd.mm.gggg.)"></div><div><input class="unos" id="poOib" inputmode="numeric" maxlength="11" placeholder="OIB"></div></div>' +
+    '<div class="dvoje" style="margin-top:8px"><div><input class="unos" id="poAdr" placeholder="Adresa (ulica i broj)"></div><div><input class="unos" id="poNas" placeholder="Naselje"></div></div>' +
+    '<div style="margin-top:8px"><select class="unos" id="poSpol"><option value="">Spol</option><option value="Z">Žensko</option><option value="M">Muško</option></select></div>' +
+    '<p class="muted small">Za novu osobu odmah se izrađuju ulazni (O1) i izlazni (O2) obrazac u njezinu mapu (Drive › Zlatni puls – korisnici › NOVI KORISNICI ZNS… › redni broj).</p>' +
+    '<div class="btnrow one"><button class="btn ghost" id="poNovaOK">' + I.plus + 'Koristi ovu osobu</button></div></details>' +
+    '<div style="margin-top:12px"><label class="polje" for="poTel">Broj telefona</label><input class="unos" id="poTel" type="tel" inputmode="tel" autocomplete="off" placeholder="npr. 091 234 5678"></div>' +
+    '<div style="margin-top:12px"><b class="small">Osobna iskaznica</b> <span class="muted small">– prednja i stražnja strana (fotografija, slika ili PDF). Sprema se u povjerljivu mapu, odvojeno od materijala provedbe.</span>' +
+    '<div class="btnrow"><button class="btn ghost" type="button" id="poOsK">' + I.foto + 'Fotografiraj</button><button class="btn ghost" type="button" id="poOsU">' + I.galerija + 'Učitaj</button></div><div class="chips" id="poOsL"></div></div></div>' +
     '<div class="card"><h3>2. Datum prijave</h3><div class="dvoje"><div><label class="polje" for="poDatum">Datum</label><input class="unos" type="date" id="poDatum"></div>' +
     '<div><label class="polje" for="poVrij">Vrijeme</label><input class="unos" type="time" id="poVrij"></div></div></div>' +
     '<div class="card"><h3>3. Termini</h3><div class="mjesec"><button class="iconbtn" id="poPrev">' + I.lijevo + '</button><b id="poMj"></b><button class="iconbtn" id="poNext">' + I.desno + '</button></div>' +
@@ -1495,14 +1501,32 @@ function prijavaOsobe() {
         return '<div class="osoba" data-id="' + esc(k.id) + '"><span class="ime"><b>' + esc(k.prezime) + '</b> ' + esc(k.ime) + '<br><span class="muted small">' + esc([k.id, k.god, k.naselje].filter(String).join(' · ')) + '</span></span>' + I.plus + '</div>';
       }).join('') || '<p class="muted small">Nema takve osobe – upišite je kao novu.</p>';
       $$('#poRez .osoba').forEach(function (el) {
-        el.onclick = function () { P.osoba = lista.filter(function (x) { return x.id === el.getAttribute('data-id'); })[0]; P.novi = null; $('#poTrazi').value = ''; $('#poRez').innerHTML = ''; crtajOsobu(); };
+        el.onclick = function () { P.osoba = lista.filter(function (x) { return x.id === el.getAttribute('data-id'); })[0]; P.novi = null; if (P.osoba && P.osoba.tel && !$('#poTel').value) $('#poTel').value = P.osoba.tel; $('#poTrazi').value = ''; $('#poRez').innerHTML = ''; crtajOsobu(); };
       });
     };
   }).catch(function (e) { $('#poRez').innerHTML = '<p class="status-err small">' + esc(e.message) + '</p>'; });
+  function dodajOsobne(files) {
+    files.forEach(function (f) {
+      var pdf = /pdf/i.test(f.type) || /\.pdf$/i.test(f.name || '');
+      (pdf ? Promise.resolve({ blob: f, mime: 'application/pdf', ext: 'pdf' }) : smanjiFoto(f)).then(function (r) {
+        P.osobne.push({ blob: r.blob, mime: r.mime, ext: r.ext, ime: f.name || 'osobna' }); crtajOsobne();
+      }).catch(function () { toast('Datoteka se ne može pročitati: ' + (f.name || '')); });
+    });
+  }
+  function crtajOsobne() {
+    $('#poOsL').innerHTML = P.osobne.map(function (o, i) { return '<span class="chip ok">Osobna ' + (i + 1) + (o.ext === 'pdf' ? ' (PDF)' : '') + ' <b data-osx="' + i + '" style="cursor:pointer">×</b></span>'; }).join('');
+    $$('#poOsL [data-osx]').forEach(function (b) { b.onclick = function () { P.osobne.splice(+b.getAttribute('data-osx'), 1); crtajOsobne(); }; });
+    sazetak();
+  }
+  $('#poOsK').onclick = function () { odaberi('image/*', true, false, dodajOsobne); };
+  $('#poOsU').onclick = function () { odaberi('image/*,application/pdf', false, true, dodajOsobne); };
   $('#poNovaOK').onclick = function () {
     var ime = $('#poIme').value.trim(), prez = $('#poPrez').value.trim();
     if (!ime || !prez) { toast('Upišite ime i prezime.'); return; }
-    P.novi = { ime: ime, prezime: prez, god: $('#poGod').value.trim(), naselje: $('#poNas').value.trim() }; P.osoba = null;
+    var dr = $('#poDR').value.trim(), oib = $('#poOib').value.replace(/\D/g, '');
+    if (oib && oib.length !== 11) { toast('OIB mora imati 11 znamenki.'); return; }
+    var gm = dr.match(/(19|20)\d{2}/);
+    P.novi = { ime: ime, prezime: prez, god: gm ? gm[0] : '', datumRodjenja: dr, oib: oib, adresa: $('#poAdr').value.trim(), spol: $('#poSpol').value, naselje: $('#poNas').value.trim() }; P.osoba = null;
     $('#poNovaD').open = false; crtajOsobu();
   };
 
@@ -1547,22 +1571,24 @@ function prijavaOsobe() {
     var nT = Object.keys(P.termini).length, nO = Object.keys(P.opce).length;
     var o = P.osoba ? P.osoba.prezime + ' ' + P.osoba.ime : P.novi ? P.novi.prezime + ' ' + P.novi.ime : '—';
     $('#poSazetak').innerHTML = '<b>' + esc(o) + '</b> · prijava ' + esc(P.datum ? kratkiDatum(P.datum) + P.datum.slice(0, 4) + '.' : '') + ' u ' + esc(P.vrijeme || '') +
-      '<br>Termina: <b>' + nT + '</b> · općih prijava: <b>' + nO + '</b>';
-    $('#poSpremi').textContent = 'Prijavi (' + (nT + nO) + ')';
+      '<br>Termina: <b>' + nT + '</b> · općih prijava: <b>' + nO + '</b> · osobna: <b>' + P.osobne.length + '</b>';
+    $('#poSpremi').textContent = nT + nO ? 'Prijavi (' + (nT + nO) + ')' : P.osobne.length ? 'Spremi osobnu' : 'Spremi';
   }
   $('#poSpremi').onclick = function () {
     if (!P.osoba && !P.novi) { toast('Odaberite osobu.'); return; }
     if (!P.datum) { toast('Odaberite datum prijave.'); return; }
     var tt = Object.keys(P.termini).map(function (k) { return P.termini[k]; }), oo = Object.keys(P.opce).map(function (k) { return P.opce[k]; });
-    if (!tt.length && !oo.length) { toast('Odaberite barem jedan termin ili aktivnost.'); return; }
+    if (!tt.length && !oo.length && !P.osobne.length && !$('#poTel').value.trim()) { toast('Odaberite barem jedan termin ili aktivnost (ili dodajte osobnu).'); return; }
     var kasni = tt.filter(function (t) { return t.datum < P.datum; });
     if (kasni.length && !confirm('Datum prijave je nakon ' + kasni.length + ' odabranih termina. Ipak spremiti?')) return;
     var ime = P.osoba ? P.osoba.prezime + ' ' + P.osoba.ime : P.novi.prezime + ' ' + P.novi.ime + ' (nova)';
-    ZP.uRed({ tip: 'prijavaOsobe', p: { korisnik: P.osoba ? P.osoba.id : null, novi: P.novi, datum: P.datum, vrijeme: P.vrijeme, termini: tt, opce: oo },
-      ime: ime + ' · ' + (tt.length + oo.length) + ' aktivnosti' }).then(function () {
+    var osobne = P.osobne.slice(), tel = $('#poTel').value.replace(/[^\d+ /-]/g, '').trim();
+    ZP.uRed({ tip: 'prijavaOsobe', p: { korisnik: P.osoba ? P.osoba.id : null, novi: P.novi, datum: P.datum, vrijeme: P.vrijeme, termini: tt, opce: oo, telefon: tel, samoOsobna: !tt.length && !oo.length },
+      osobne: osobne, velicina: osobne.reduce(function (s, o) { return s + o.blob.size; }, 0),
+      ime: ime + ' · ' + (tt.length + oo.length) + ' aktivnosti' + (osobne.length ? ' + osobna' : '') }).then(function () {
       toast(naMrezi() ? 'Prijavljujem: ' + ime : 'Spremljeno na mobitel – upisat će se kad bude interneta.', 3500);
-      P.osoba = P.novi = null; P.termini = {}; P.opce = {};
-      crtajOsobu(); crtajTermine(); crtajOpce();
+      P.osoba = P.novi = null; P.termini = {}; P.opce = {}; P.osobne = []; $('#poTel').value = '';
+      crtajOsobu(); crtajTermine(); crtajOpce(); crtajOsobne();
     }).catch(greska);
   };
   crtajOsobu(); crtajTermine(); crtajOpce();
