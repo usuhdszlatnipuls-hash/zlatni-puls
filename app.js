@@ -3,7 +3,7 @@
    Provedba aktivnosti · Komunikacija i vidljivost · Prijave na aktivnosti
    Sve se sprema na mobitel i šalje na Drive kad ima interneta.
    ═══════════════════════════════════════════════════════════════════════ */
-var VERZIJA_APP = '2026-11-13b';
+var VERZIJA_APP = '2026-11-13c';
 var DANI = ['nedjelja', 'ponedjeljak', 'utorak', 'srijeda', 'četvrtak', 'petak', 'subota'];
 var MJ = ['siječanj', 'veljača', 'ožujak', 'travanj', 'svibanj', 'lipanj', 'srpanj', 'kolovoz', 'rujan', 'listopad', 'studeni', 'prosinac'];
 var MJ_GEN = ['siječnja', 'veljače', 'ožujka', 'travnja', 'svibnja', 'lipnja', 'srpnja', 'kolovoza', 'rujna', 'listopada', 'studenoga', 'prosinca'];
@@ -870,6 +870,7 @@ function noviVidljivost(pre) {
     '<div class="card"><label class="polje">Vrsta</label><div class="kat" id="vKat">' + KATEGORIJE.map(function (k) {
       return '<button type="button" data-k="' + k.id + '">' + esc(k.naziv) + (k.cilj ? '<span class="muted">cilj ' + k.cilj + '/god.</span>' : '') + '</button>';
     }).join('') + '</div>' +
+    '<label class="polje" for="vAkt">Aktivnost projekta (naziv datoteke)</label><select class="unos" id="vAkt"><option value="">– općenito o projektu –</option></select>' +
     '<div class="dvoje"><div><label class="polje" for="vDatum">Datum</label><input class="unos" type="date" id="vDatum"></div>' +
     '<div><label class="polje" for="vKanal">Kanal</label><input class="unos" id="vKanal" list="vKanali" placeholder="FB, IG, Web…"><datalist id="vKanali"></datalist></div></div>' +
     '<label class="polje" for="vOrg">Gdje / kod koga (organizacija, stranica, mjesto)</label><input class="unos" id="vOrg" list="vOrgL" placeholder="npr. Crveni križ Dugo Selo">' +
@@ -887,6 +888,36 @@ function noviVidljivost(pre) {
     '<div class="btnrow one"><button class="btn gold" id="vSpremi">Spremi u Vidljivost</button></div>';
   $('#natrag').onclick = pre.kategorija ? function () { kvPregled(); } : pocetnaVidljivost;
   $('#vDatum').value = V.datum;
+  V.akt = null;
+  var AKT_OPC = [];
+  function puniAktivnosti() {
+    var d = V.datum || danas();
+    Promise.all([terminiMjeseca(d.slice(0, 7)).catch(function () { return []; }), sKesom('aktivnosti_prijave', 'aktivnostiPrijave', []).catch(function () { return []; })]).then(function (r) {
+      if (!$('#vAkt')) return;
+      var dan = r[0].filter(function (t) { return t.datum === d; }), vid = {};
+      AKT_OPC = [];
+      dan.forEach(function (t) { AKT_OPC.push({ k: 'T|' + t.kljuc, sifra: t.sifra, naziv: t.aktivnost || t.kratko, kljuc: t.kljuc, opis: t.pocetak + ' ' + (t.kratko || t.aktivnost) + ' · ' + t.lokacija }); });
+      r[0].concat(r[1]).forEach(function (a) {
+        var nz = a.aktivnost || a.kratko; if (!a.sifra || !nz || vid[a.sifra + nz]) return; vid[a.sifra + nz] = 1;
+        AKT_OPC.push({ k: 'A|' + a.sifra + '|' + nz, sifra: a.sifra, naziv: nz, opis: a.sifra + ' ' + nz });
+      });
+      var sel = V.akt ? V.akt.k : $('#vAkt').value;
+      $('#vAkt').innerHTML = '<option value="">– općenito o projektu –</option>' +
+        (dan.length ? '<optgroup label="Termini ' + esc(kratkiDatum(d)) + '">' + AKT_OPC.filter(function (o) { return o.kljuc; }).map(function (o) { return '<option value="' + esc(o.k) + '">' + esc(o.opis) + '</option>'; }).join('') + '</optgroup>' : '') +
+        '<optgroup label="Aktivnosti">' + AKT_OPC.filter(function (o) { return !o.kljuc; }).sort(function (a, b) { return a.sifra.localeCompare(b.sifra); }).map(function (o) { return '<option value="' + esc(o.k) + '">' + esc(o.opis) + '</option>'; }).join('') + '</optgroup>';
+      if (sel) $('#vAkt').value = sel;
+    });
+  }
+  function odaberiAkt(k) {
+    V.akt = AKT_OPC.filter(function (o) { return o.k === k; })[0] || null;
+    if ($('#vAkt').value !== (V.akt ? V.akt.k : '')) $('#vAkt').value = V.akt ? V.akt.k : '';
+    nazivPregled();
+  }
+  function aktTekst() { return V.akt ? V.akt.sifra + ' ' + V.akt.naziv : ''; }
+  $('#vAkt').onchange = function () { V.rucno.akt = true; odaberiAkt($('#vAkt').value); };
+  $('#vDatum').addEventListener('change', puniAktivnosti);
+  puniAktivnosti();
+  V.aktTekst = aktTekst;
   var polja = { kanal: '#vKanal', organizacija: '#vOrg', naslov: '#vNaslov', brojKomada: '#vBroj', poveznica: '#vLink', datum: '#vDatum', opis: '#vOpis', doseg: '#vDoseg' };
   Object.keys(polja).forEach(function (k) { $(polja[k]).addEventListener('input', function () { V[k] = $(polja[k]).value; V.rucno[k] = true; nazivPregled(); }); });
   $$('#vKat button').forEach(function (b) { b.onclick = function () { V.rucno.kategorija = true; odaberiKat(b.getAttribute('data-k')); }; });
@@ -916,13 +947,23 @@ function noviVidljivost(pre) {
     if (r.kategorija && !V.rucno.kategorija) odaberiKat(r.kategorija);
     ['kanal', 'organizacija', 'naslov', 'brojKomada', 'poveznica', 'datum'].forEach(function (k) { postavi(k, r[k]); });
     if (!V.rucno.opis) { V.opis = tx; $('#vOpis').value = tx; }
+    if (!V.rucno.akt) {
+      var t = ' ' + norm(tx) + ' ';
+      var nadjen = AKT_OPC.filter(function (o) {
+        var rij = norm(o.naziv).split(/[^a-z0-9]+/).filter(function (w) { return w.length > 4 && ['radionice', 'savjetovanje', 'aktivnosti'].indexOf(w) < 0; });
+        return rij.length && rij.some(function (w) { return t.indexOf(w.slice(0, 6)) >= 0; });
+      });
+      nadjen.sort(function (a, b) { return (b.kljuc ? 1 : 0) - (a.kljuc ? 1 : 0); });
+      if (nadjen[0]) odaberiAkt(nadjen[0].k);
+    }
     nazivPregled();
   }
   function nazivPregled() {
     var d = [V.datum || danas(), dio(V.kanal || 'Ostalo')];
     if (V.organizacija) d.push(dio(V.organizacija));
     var k = KATEGORIJE.filter(function (x) { return x.id === V.kategorija; })[0];
-    d.push(dio(V.naslov || (k ? k.naziv : 'Vidljivost')));
+    if (V.akt) d.push(dio(aktTekst()));
+    if (V.naslov || !V.akt) d.push(dio(V.naslov || (k ? k.naziv : 'Vidljivost')));
     trebaPregled();
     $('#vNaziv').innerHTML = 'Spremit će se u <b>2. Vidljivost / ' + esc(k ? k.dulje : '…') + '</b> kao<br><b>' + esc(d.join('_')) + '_01.jpg</b>';
   }
@@ -977,7 +1018,8 @@ function spremiVidljivost() {
   var dat = V.datoteke.map(function (d) { return { ime: d.ime, blob: d.blob, mime: d.mime, ext: d.ext, velicina: d.velicina, uloga: d.uloga || 'dokaz' }; });
   var brFoto = V.datoteke.filter(function (d) { return d.uloga !== 'racun'; }).length, brRac = V.datoteke.length - brFoto;
   glasovi.forEach(function (g) { dat.push({ ime: 'glasovna bilješka', blob: g, mime: g.type || 'audio/webm', ext: /mp4/.test(g.type) ? 'm4a' : 'webm', velicina: g.size }); });
-  var z = { kategorija: V.kategorija, datum: V.datum || danas(), kanal: V.kanal.trim(), organizacija: V.organizacija.trim(), naslov: V.naslov.trim() || (kat ? kat.naziv : ''),
+  var z = { kategorija: V.kategorija, datum: V.datum || danas(), kanal: V.kanal.trim(), organizacija: V.organizacija.trim(), naslov: [V.aktTekst ? V.aktTekst() : '', V.naslov.trim()].filter(Boolean).join(' ') || (kat ? kat.naziv : ''),
+    napomena: V.akt ? 'Aktivnost: ' + V.aktTekst() + (V.akt.kljuc ? ' (termin ' + V.akt.kljuc + ')' : '') : '',
     doseg: V.doseg ? Number(V.doseg) : '', dokazi: 'foto:' + brFoto + ';racun:' + brRac + ';poveznica:' + (V.poveznica.trim() ? 1 : 0),
     opis: (V.opis || '').trim() + (glasovi.length ? '\n[priložena glasovna bilješka]' : ''), poveznica: V.poveznica.trim(), brojKomada: V.brojKomada ? Number(V.brojKomada) : '' };
   var thumb = (V.datoteke.filter(function (d) { return d.thumb; })[0] || {}).thumb || '';
