@@ -95,6 +95,7 @@ ZP.pokreni = function () {
       return ZP.redSpremi(q).then(function () { ZP.obavijesti(q); return ZP.obradi(q); }).then(function (rez) {
         q.status = 'gotovo'; q.rez = rez || q.rez || null; q.gotovo = Date.now(); delete q.blob;
         if (q.datoteke) q.datoteke.forEach(function (d) { delete d.blob; });
+        if (q.osobne) q.osobne.forEach(function (d) { delete d.blob; });
         return ZP.redSpremi(q);
       }, function (e) {
         q.pokusaja = (q.pokusaja || 0) + 1;
@@ -197,7 +198,17 @@ ZP.obradi = function (q) {
   }
   if (q.tip === 'prijavaOsobe') {
     q.p.cid = q.cid;
-    return ZP.api('prijaviOsobu', q.p);
+    return ZP.api('prijaviOsobu', q.p).then(function (r) {
+      var os = q.osobne || [];
+      return os.reduce(function (pr, d, i) {
+        return pr.then(function () {
+          if (d.gotovo || !d.blob) return;
+          return ZP.b64(d.blob).then(function (b) {
+            return ZP.api('osobnaSpremi', { idKorisnika: r.idKorisnika, b64: b, mime: d.mime, ext: d.ext, cid: q.cid + '_os' + i });
+          }).then(function () { d.gotovo = true; return ZP.redSpremi(q); });
+        });
+      }, Promise.resolve()).then(function () { return r; });
+    });
   }
   return Promise.reject(new Error('Nepoznata vrsta zadatka'));
 };
