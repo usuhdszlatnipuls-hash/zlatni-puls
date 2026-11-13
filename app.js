@@ -3,7 +3,7 @@
    Provedba aktivnosti · Komunikacija i vidljivost · Prijave na aktivnosti
    Sve se sprema na mobitel i šalje na Drive kad ima interneta.
    ═══════════════════════════════════════════════════════════════════════ */
-var VERZIJA_APP = '2026-10-28a';
+var VERZIJA_APP = '2026-11-13b';
 var DANI = ['nedjelja', 'ponedjeljak', 'utorak', 'srijeda', 'četvrtak', 'petak', 'subota'];
 var MJ = ['siječanj', 'veljača', 'ožujak', 'travanj', 'svibanj', 'lipanj', 'srpanj', 'kolovoz', 'rujan', 'listopad', 'studeni', 'prosinac'];
 var MJ_GEN = ['siječnja', 'veljače', 'ožujka', 'travnja', 'svibnja', 'lipnja', 'srpnja', 'kolovoza', 'rujna', 'listopada', 'studenoga', 'prosinca'];
@@ -21,10 +21,11 @@ var KATEGORIJE = [
   { id: 'vanjsko', naziv: 'Jumbo / city light', dulje: 'Vanjsko oglašavanje (jumbo plakat / city light)', kanali: ['Jumbo plakat', 'City light'], cilj: 3 },
   { id: 'mediji', naziv: 'Mediji i portali', dulje: 'Mediji – PR članci i portali', kanali: ['Portal', 'Novine', 'Radio', 'TV'], cilj: 0 },
   { id: 'rollup', naziv: 'Roll-up banner', dulje: 'Roll-up banner', kanali: ['Roll-up'], cilj: 1 },
-  { id: 'dogadjanja', naziv: 'Događanja', dulje: 'Događanja i predstavljanja projekta', kanali: ['Događanje'], cilj: 0 }
+  { id: 'dogadjanja', naziv: 'Događanja', dulje: 'Događanja i predstavljanja projekta', kanali: ['Događanje'], cilj: 0 },
+  { id: 'sastanak', naziv: 'Kvartalni sastanak', dulje: 'Kvartalni sastanak partnera (komunikacija)', kanali: ['Sastanak'], cilj: 4 }
 ];
 var POZNATE_ORG = ['Grad Dugo Selo', 'Općina Rugvica', 'Općina Brckovljani', 'Crveni križ Dugo Selo', 'SUH Dugo Selo', 'SUH Rugvica',
-  'USUH Dugo Selo', 'Gradska udruga umirovljenika', 'Udruga Crne mambe', 'Udruga umirovljenika Brckovljani', 'Hrvatski vitezovi',
+  'USUH Dugo Selo', 'Gradska udruga umirovljenika Dugo Selo', 'KUD Preporod Dugo Selo', 'Udruga Crne mambe', 'Udruga umirovljenika Brckovljani', 'Hrvatski vitezovi',
   'Gradska knjižnica Dugo Selo', 'Dom zdravlja Dugo Selo', 'Radio Martin', 'Dugoselska kronika', 'Prigorski.hr', 'Zagrebački.hr', 'Dugoselski.hr'];
 
 var S = { tab: 'provedba', datum: danas(), mjesec: danas().slice(0, 7), termin: null, prijaveMjesec: danas().slice(0, 7), korisnici: null };
@@ -603,16 +604,197 @@ function mikrofon(b) {
   }).catch(function () { toast('Mikrofon nije dopušten.'); });
 }
 
+/* ═══ KOMUNIKACIJA I VIDLJIVOST – OBVEZE (prijavni obrazac SF.3.4.08.06.0086 + Upute za prijavitelje 2.10. i mjerljivi ishod 5) ═══ */
+var PROJEKT = { pocetak: '2026-05-25', mjeseci: 36 };
+var PARTNERI = [
+  { id: 'usuh', naziv: 'USUH Dugo Selo (prijavitelj)', re: /usuh|sindikat|zlatni ?puls|\bsuh\b/ },
+  { id: 'gdck', naziv: 'Crveni križ Dugo Selo', re: /crven|gdck/ },
+  { id: 'guu', naziv: 'Gradska udruga umirovljenika Dugo Selo', re: /gradsk\w* udrug\w* umirov|\bguu\b/ },
+  { id: 'kud', naziv: 'KUD Preporod Dugo Selo', re: /\bkud\b|preporod/ },
+  { id: 'mambe', naziv: 'Udruga Crne mambe', re: /mamb/ }
+];
+/* Mjerljivi ishod 5 – „Broj provedenih aktivnosti radi promocije projekta” (ispunjen tek kad su ispunjene SVE stavke). */
+var ISHOD5 = [
+  { kat: 'web_esf', kratko: 'ESF+ web', naziv: 'Objava o potpori ESF+ na webu prijavitelja i partnera', godisnje: 1, dokazi: 'poveznica + snimka zaslona' },
+  { kat: 'vanjsko', kratko: 'Jumbo', naziv: 'Jumbo plakat / city light – vizualno različiti oglasi', godisnje: 3, dokazi: 'fotografije + račun dobavljača i specifikacija' },
+  { kat: 'video', kratko: 'Video', naziv: 'Promotivni video na webu i društvenim mrežama', godisnje: 12, dokazi: 'poveznica + snimka zaslona za SVAKI video' },
+  { kat: 'rollup', kratko: 'Roll-up', naziv: 'Roll-up banner o projektu', projekt: 1, dokazi: 'fotografija postavljenog bannera + račun' },
+  { kat: 'plakati', kratko: 'Plakati', naziv: 'Promotivni plakati, najmanje A2', godisnje: 50, komadi: true, dokazi: 'fotografije postavljenih plakata + račun' }
+];
+var DOKAZI = { web_esf: ['poveznica', 'snimka'], video: ['poveznica', 'snimka'], drustvene: ['poveznica', 'snimka'], web: ['poveznica', 'snimka'],
+  mediji: ['poveznica', 'snimka'], vanjsko: ['foto', 'racun'], rollup: ['foto', 'racun'], plakati: ['foto', 'racun'], letci: ['foto'],
+  dogadjanja: ['foto'], sastanak: ['datoteka'] };
+var DOKAZ_NAZIV = { poveznica: 'poveznica na objavu', snimka: 'snimka zaslona', foto: 'fotografija', racun: 'račun dobavljača', datoteka: 'zapisnik / potpisna lista' };
+var IZJAVA_EU = 'Izneseni stavovi i mišljenja samo su autorova i ne odražavaju nužno službena stajališta Europske unije ili Europske komisije. Ni Europska unija ni Europska komisija ne mogu se smatrati odgovornima za njih.';
+
+function pgGranice(g) {
+  var p = odYmd(PROJEKT.pocetak);
+  return { od: ymd(new Date(p.getFullYear() + g - 1, p.getMonth(), p.getDate())), do: ymd(new Date(p.getFullYear() + g, p.getMonth(), p.getDate() - 1)) };
+}
+function projGodina(s) { for (var g = 1; g <= 3; g++) if (s <= pgGranice(g).do) return g; return 3; }
+function partnerOd(org) { var o = norm(org); var p = PARTNERI.filter(function (x) { return x.re.test(o); })[0]; return p ? p.id : ''; }
+function dokaziZapisa(z) {
+  var r = { foto: 0, racun: 0, poveznica: z.poveznica ? 1 : 0 };
+  if (z.dokazi) String(z.dokazi).split(';').forEach(function (p) { var kv = p.split(':'); if (kv[0] in r) r[kv[0]] = Number(kv[1]) || 0; });
+  else r.foto = Number(z.datoteka) || 0;
+  if (z.poveznica) r.poveznica = 1;
+  return r;
+}
+/** Što nedostaje pojedinom zapisu (račun se provjerava po vrsti i projektnoj godini). */
+/** Zapis koji je samo račun dobavljača (ne broji se kao plakat/oglas). */
+function jeRacun(z) { var d = dokaziZapisa(z); return /^racun/.test(norm(z.naslov)) || (d.racun > 0 && !d.foto); }
+function nedostajeZapisu(z) {
+  var d = dokaziZapisa(z), f = [];
+  if (jeRacun(z)) return f;
+  (DOKAZI[z.kat] || []).forEach(function (t) {
+    if (t === 'poveznica' && !d.poveznica) f.push(t);
+    if ((t === 'snimka' || t === 'foto' || t === 'datoteka') && !d.foto) f.push(t);
+  });
+  return f;
+}
+function kvIzracun(zap, g) {
+  var gr = pgGranice(g), danasS = danas();
+  var uG = zap.filter(function (z) { return projGodina(z.datum || danasS) === g; });
+  var od = odYmd(gr.od).getTime(), doo = odYmd(gr.do).getTime() + 864e5;
+  var udio = Math.max(0, Math.min(1, (Date.now() - od) / (doo - od)));
+  var ishod = ISHOD5.map(function (it) {
+    var skup = it.projekt ? zap : uG;
+    var ovi = skup.filter(function (z) { return z.kat === it.kat && !jeRacun(z); });
+    var broj = ovi.reduce(function (s, z) { return s + (it.komadi ? (Number(z.brojKomada) || 1) : 1); }, 0);
+    var cilj = it.projekt || it.godisnje;
+    var ocek = it.projekt ? cilj : Math.ceil(cilj * udio);
+    var racun = (DOKAZI[it.kat] || []).indexOf('racun') >= 0 ? skup.some(function (z) { return z.kat === it.kat && dokaziZapisa(z).racun > 0; }) : null;
+    var st = broj >= cilj ? 'ok' : (g < projGodina(danasS) ? 'bad' : broj >= ocek ? 'gold' : 'warn');
+    return { it: it, broj: broj, cilj: cilj, ocek: ocek, racun: racun, st: st };
+  });
+  var nedostaje = uG.map(function (z) { return { z: z, f: nedostajeZapisu(z) }; }).filter(function (x) { return x.f.length; });
+  var partneri = PARTNERI.map(function (p) {
+    var ovi = uG.filter(function (z) { return partnerOd(z.organizacija) === p.id && z.kat !== 'sastanak' && z.kat !== 'letci'; });
+    return { p: p, broj: ovi.length, esf: ovi.some(function (z) { return z.kat === 'web_esf'; }), doseg: ovi.reduce(function (s, z) { return s + (Number(z.doseg) || 0); }, 0) };
+  });
+  var sast = uG.filter(function (z) { return z.kat === 'sastanak'; }).sort(function (a, b) { return b.datum.localeCompare(a.datum); });
+  var sviUsuh = function (kat) { return zap.some(function (z) { return z.kat === kat && partnerOd(z.organizacija) === 'usuh'; }); };
+  var obveze = [
+    { t: 'Kratki opis projekta (ciljevi, rezultati, potpora EU) na službenoj web stranici korisnika', ok: sviUsuh('web_esf') || sviUsuh('web') },
+    { t: 'Isti kratki opis na društvenim mrežama korisnika', ok: zap.some(function (z) { return z.kat === 'drustvene' && (partnerOd(z.organizacija) === 'usuh' || !z.organizacija); }) },
+    { t: 'Izjava o potpori EU (amblem + „Sufinancira Europska unija”) na svim dokumentima i materijalima za javnost i sudionike', ok: true, auto: 'PDF-ovi iz aplikacije imaju traku i izjavu automatski' },
+    { t: 'Najmanje jedan tiskani plakat (min. A3) s informacijama o projektu na mjestu jasno vidljivom javnosti', ok: zap.some(function (z) { return z.kat === 'plakati'; }) },
+    { t: 'Materijali za komunikaciju i vidljivost dostupni na zahtjev UT-u i tijelima EU (besplatna, neisključiva licenca EU)', ok: true, auto: 'sve se čuva u 2. Vidljivost na Driveu' }
+  ];
+  return { g: g, gr: gr, udio: udio, uG: uG, ishod: ishod, nedostaje: nedostaje, partneri: partneri, sast: sast, obveze: obveze };
+}
+
+function kvPregled(g) {
+  S.naPromjenuReda = null; S.osvjezi = null; S.vid = null;
+  g = g || S.kvG || projGodina(danas()); S.kvG = g;
+  $('#app').innerHTML = '<button class="btn link back" id="natrag">' + I.lijevo + 'Natrag</button><h2>Obveze komunikacije i vidljivosti</h2>' +
+    '<p class="muted small">Prema prijavnom obrascu (aktivnost KV, mjeseci 1–36, Dugo Selo, Rugvica, Brckovljani) i Uputama za prijavitelje (2.10. Komunikacija i vidljivost, mjerljivi ishod 5).</p>' +
+    '<div class="mjesec"><button class="iconbtn" id="gPrev" aria-label="Prethodna projektna godina">' + I.lijevo + '</button><b>' + g + '. projektna godina</b>' +
+    '<button class="iconbtn" id="gNext" aria-label="Sljedeća projektna godina">' + I.desno + '</button></div><div id="kvSad"><div class="spinner"></div></div>';
+  $('#natrag').onclick = pocetnaVidljivost;
+  $('#gPrev').onclick = function () { if (g > 1) kvPregled(g - 1); };
+  $('#gNext').onclick = function () { if (g < 3) kvPregled(g + 1); };
+  var crtaj = function (zap, gr) {
+    if (!$('#kvSad')) return;
+    $('#kvSad').innerHTML = (gr ? '<div class="obavijest warn">' + esc(gr) + '</div>' : '') + kvHtml(zap ? kvIzracun(zap, g) : null, g);
+    $$('#kvSad [data-kvnovi]').forEach(function (b) { b.onclick = function () { noviVidljivost({ kategorija: b.getAttribute('data-kvnovi') }); }; });
+    $$('#kvSad [data-kvracun]').forEach(function (b) { b.onclick = function () { noviVidljivost({ kategorija: b.getAttribute('data-kvracun'), naslov: 'Račun dobavljača', racun: true }); }; });
+    $$('#kvSad [data-kvpopis]').forEach(function (b) { b.onclick = function () { popisVidljivosti(b.getAttribute('data-kvpopis'), 0); }; });
+    if ($('#kvKopiraj')) $('#kvKopiraj').onclick = function () {
+      (navigator.clipboard ? navigator.clipboard.writeText(IZJAVA_EU) : Promise.reject()).then(function () { toast('Izjava kopirana.'); }, function () { toast('Označite tekst i kopirajte ručno.'); });
+    };
+  };
+  sKesom('kv_zapisi', 'kvZapisi', [], true).then(function (zap) { crtaj(zap); }).catch(function (e) {
+    crtaj(null, /Nepoznata akcija/.test(e.message) ? 'Brojke će se prikazati kad se objavi nova verzija API-ja (Apps Script).' : e.message);
+  });
+}
+
+function kvHtml(R, g) {
+  var gr = pgGranice(g), h = [];
+  var ln = function (st, t) { return '<span class="chip ' + st + '">' + t + '</span>'; };
+  var mjOst = Math.max(0, Math.round((odYmd(pgGranice(3).do) - new Date()) / (30.44 * 864e5)));
+  h.push('<div class="card"><h3>Razdoblje</h3><p>' + esc(lijepDatum(gr.od)) + ' – ' + esc(lijepDatum(gr.do)) + '</p>' +
+    (R ? '<div class="bar"><i style="width:' + Math.round(R.udio * 100) + '%"></i></div><p class="muted small">Prošlo ' + Math.round(R.udio * 100) + ' % projektne godine · do kraja projekta oko ' + mjOst + ' mj.</p>' : '') +
+    '<p class="muted small">Ciljevi se broje po projektnoj godini. Ako projekt ne traje pune godine, cilj se računa razmjerno i zaokružuje na sljedeći cijeli broj.</p></div>');
+
+  // Mjerljivi ishod 5
+  var isp = R ? R.ishod.filter(function (x) { return x.st === 'ok'; }).length : 0;
+  h.push('<div class="card"><h3>Mjerljivi ishod 5 · promocija projekta' + (R ? ' ' + ln(isp === ISHOD5.length ? 'ok' : 'warn', isp + ' / ' + ISHOD5.length) : '') + '</h3>' +
+    '<p class="muted small">Ishod je ispunjen tek kad su ispunjene SVE stavke.</p>' + ISHOD5.map(function (it, i) {
+      var x = R ? R.ishod[i] : null, cilj = it.projekt || it.godisnje;
+      var post = x ? Math.min(100, Math.round(x.broj / cilj * 100)) : 0;
+      var status = !x ? '' : x.st === 'ok' ? ln('ok', 'Ispunjeno') : x.st === 'gold' ? ln('gold', 'U roku') : x.st === 'bad' ? ln('bad', 'Nije ispunjeno') : ln('warn', 'Kasni: do danas ' + x.ocek);
+      return '<div class="cilj"><span><b>' + esc(it.naziv) + '</b><br><span class="muted small">Cilj: ' + cilj + (it.projekt ? ' po projektu' : ' godišnje') + (it.komadi ? ' kom.' : '') + ' · Dokaz: ' + esc(it.dokazi) + '</span></span>' +
+        '<b>' + (x ? x.broj : '–') + ' / ' + cilj + '</b>' + (x ? '<div class="bar" style="grid-column:1/3"><i style="width:' + post + '%"></i></div>' : '') +
+        '<div class="chips" style="grid-column:1/3">' + status + (x && x.racun === false ? ln('bad', 'Nema računa') : x && x.racun ? ln('ok', 'Račun ✓') : '') +
+        '<button class="chip gold" type="button" data-kvnovi="' + it.kat + '">+ Dodaj</button>' +
+        (x && x.racun === false ? '<button class="chip" type="button" data-kvracun="' + it.kat + '">+ Račun</button>' : '') +
+        '<button class="chip" type="button" data-kvpopis="' + it.kat + '">Datoteke</button></div></div>';
+    }).join('') + '</div>');
+
+  // Dokazna dokumentacija
+  if (R) h.push('<div class="card"><h3>Dokazna dokumentacija ' + ln(R.nedostaje.length ? 'warn' : 'ok', R.nedostaje.length ? 'nedostaje ' + R.nedostaje.length : 'potpuna') + '</h3>' +
+    (R.nedostaje.length ? '<ul class="popis">' + R.nedostaje.slice(0, 40).map(function (x) {
+      var k = KATEGORIJE.filter(function (q) { return q.id === x.z.kat; })[0];
+      return '<li><span class="ime"><b>' + esc(kratkiDatum(x.z.datum)) + '</b> ' + esc((k ? k.naziv : '') + ' · ' + [x.z.organizacija, x.z.naslov].filter(Boolean).join(' · ')) +
+        '<br><span class="muted small">Nedostaje: ' + esc(x.f.map(function (t) { return DOKAZ_NAZIV[t]; }).join(', ')) + '</span></span></li>';
+    }).join('') + '</ul><p class="muted small">Upute: za objave i video – poveznica i snimka zaslona; za plakate, jumbo i roll-up – fotografije i račun s specifikacijom. Uvažavaju se i jednakovrijedni dokazi.</p>'
+      : '<p class="muted">Svi zapisi ove projektne godine imaju potrebne dokaze.</p>') + '</div>');
+
+  // Partneri
+  if (R) h.push('<div class="card"><h3>Prijavitelj i partneri · objava barem jednom godišnje</h3>' + R.partneri.map(function (x) {
+    return '<div class="cilj"><span>' + esc(x.p.naziv) + (x.doseg ? '<br><span class="muted small">Doseg: ' + x.doseg + '</span>' : '') + '</span><b>' + x.broj + '</b>' +
+      '<div class="chips" style="grid-column:1/3">' + ln(x.broj ? 'ok' : 'bad', x.broj ? 'Objavio' : 'Nema objave') + ln(x.esf ? 'ok' : 'warn', x.esf ? 'ESF+ web ✓' : 'ESF+ web objava') + '</div></div>';
+  }).join('') + '<p class="muted small">Prijavni obrazac: partneri koriste dostavljene vizuale, objavljuju informacije o projektu barem jednom godišnje, dokumentiraju aktivnosti i izvještavaju o dosegu. Organizacija se prepoznaje iz polja „Gdje / kod koga”.</p></div>');
+
+  // Kvartalni sastanci
+  if (R) h.push('<div class="card"><h3>Kvartalni sastanci koordinacije ' + ln(R.sast.length >= 4 ? 'ok' : R.sast.length >= Math.ceil(4 * R.udio) ? 'gold' : 'warn', R.sast.length + ' / 4') + '</h3>' +
+    '<p class="muted small">Komunikacijske aktivnosti koordinira prijavitelj kroz kvartalne sastanke s partnerima. Dokaz: zapisnik i potpisna lista.' +
+    (R.sast.length ? ' Zadnji: ' + esc(lijepDatum(R.sast[0].datum)) + '.' : '') + '</p><div class="chips"><button class="chip gold" type="button" data-kvnovi="sastanak">+ Upiši sastanak</button></div></div>');
+
+  // Obveze čl. 50.
+  h.push('<div class="card"><h3>Obveze korisnika (Upute 2.10., čl. 50. Uredbe (EU) 2021/1060)</h3><ul class="popis">' + (R ? R.obveze : [
+    { t: 'Kratki opis projekta na web stranici korisnika' }, { t: 'Isti opis na društvenim mrežama korisnika' }, { t: 'Izjava o potpori EU na svim dokumentima i materijalima' },
+    { t: 'Najmanje jedan plakat min. A3 na javno vidljivom mjestu' }, { t: 'Materijali dostupni na zahtjev UT-u i tijelima EU' }]).map(function (o) {
+    return '<li><span class="ime">' + (R ? (o.ok ? '✅ ' : '⚠️ ') : '') + esc(o.t) + (o.auto ? '<br><span class="muted small">' + esc(o.auto) + '</span>' : '') + '</span></li>';
+  }).join('') + '</ul><div class="obavijest warn">Ako se obveze komunikacije i vidljivosti ne poštuju, primjenjuje se financijska korekcija do 3 % potpore.</div></div>');
+
+  // Obvezni elementi
+  h.push('<div class="card"><h3>Na svakom materijalu (plakat, letak, objava, video, dokument)</h3><img src="traka.png" alt="Traka s logotipima" style="width:100%;height:auto;margin:6px 0">' +
+    '<p class="small">' + esc(IZJAVA_EU) + '</p><div class="btnrow one"><button class="btn ghost" id="kvKopiraj">Kopiraj izjavu</button></div>' +
+    '<p class="muted small">Redoslijed trake: ESF+ Učinkoviti ljudski potencijali · Vlada RH Ured za udruge · Nacionalna zaklada za razvoj civilnoga društva · Sufinancira Europska unija. ESF+ logotip prema Knjizi grafičkih standarda (esf.hr).</p></div>');
+
+  // Spremanje
+  h.push('<div class="card"><h3>Gdje se sprema</h3><p class="small">Drive › Zlatni puls – provedba › <b>2. Vidljivost</b> › mapa vrste. Naziv se slaže sam i počinje danom objave:<br>' +
+    '<b>2026-11-13_FB_Crveni_križ_Dugo_Selo_Poziv_na_radionice_01.jpg</b><br>račun: <b>…_Račun_dobavljača_Racun_01.pdf</b>, zapis: <b>…_zapis.pdf</b>. Evidencija je u tablici, list „Vidljivost”.</p></div>');
+  return h.join('');
+}
+
 /* ═══ 2. KOMUNIKACIJA I VIDLJIVOST ═══════════════════════════════════ */
 function pocetnaVidljivost() {
   S.naPromjenuReda = null;
   var app = $('#app');
   app.innerHTML = '<div class="naslovTaba"><h2>Komunikacija i vidljivost</h2></div>' +
-    '<div class="btnrow one"><button class="btn gold" id="vNovi">' + I.plus + 'Novi element vidljivosti</button></div>' +
+    '<div class="btnrow"><button class="btn gold" id="vNovi">' + I.plus + 'Novi element</button><button class="btn primary" id="vKvBtn">' + I.izv + 'Obveze i ishod 5</button></div>' +
+    '<div class="card hidden" id="vKv"></div>' +
     '<div class="card" id="vCilj"><h3>Ciljevi iz prijavnog obrasca (' + new Date().getFullYear() + '.)</h3><div class="spinner"></div></div>' +
     '<div class="card" id="vRed"><h3>Zadnje spremljeno s mobitela</h3><div class="spinner"></div></div>';
   $('#vNovi').onclick = function () { noviVidljivost(); };
+  $('#vKvBtn').onclick = function () { kvPregled(); };
   var crtaj = function () {
+    sKesom('kv_zapisi', 'kvZapisi', []).then(function (zap) {
+      if (!$('#vKv')) return;
+      var R = kvIzracun(zap, projGodina(danas()));
+      var isp = R.ishod.filter(function (x) { return x.st === 'ok' || x.st === 'gold'; }).length;
+      var kasni = R.ishod.filter(function (x) { return x.st === 'warn' || x.st === 'bad'; }).map(function (x) { return x.it.kratko + ' ' + x.broj + '/' + x.ocek; });
+      $('#vKv').innerHTML = '<h3>' + R.g + '. projektna godina · stanje</h3><div class="chips">' +
+        '<span class="chip ' + (kasni.length ? 'warn' : 'ok') + '">Ishod 5: ' + isp + '/' + R.ishod.length + ' u roku</span>' +
+        '<span class="chip ' + (R.nedostaje.length ? 'warn' : 'ok') + '">Nedostaje dokaza: ' + R.nedostaje.length + '</span>' +
+        '<span class="chip ' + (R.partneri.every(function (x) { return x.broj; }) ? 'ok' : 'warn') + '">Partneri s objavom: ' + R.partneri.filter(function (x) { return x.broj; }).length + '/' + R.partneri.length + '</span>' +
+        '<span class="chip">Sastanci: ' + R.sast.length + '/4</span></div>' +
+        (kasni.length ? '<p class="muted small">Kasni (do danas treba): ' + esc(kasni.join(' · ')) + '</p>' : '');
+      $('#vKv').classList.remove('hidden');
+    }).catch(function () {});
     sKesom('vid_pregled', 'vidljivostPregled', [new Date().getFullYear()]).then(function (p) {
       if (S.tab !== 'vidljivost' || !$('#vCilj')) return;
       $('#vCilj').innerHTML = '<h3>Ciljevi iz prijavnog obrasca (' + new Date().getFullYear() + '.)</h3>' + p.map(function (k) {
@@ -675,9 +857,10 @@ function popisVidljivosti(katId, godina) {
   });
 }
 
-function noviVidljivost() {
+function noviVidljivost(pre) {
+  pre = pre || {};
   S.naPromjenuReda = null; S.snimke = {};
-  var V = { kategorija: '', datum: danas(), kanal: '', organizacija: '', naslov: '', opis: '', poveznica: '', brojKomada: '', datoteke: [], rucno: {} };
+  var V = { kategorija: '', datum: danas(), kanal: '', organizacija: '', naslov: '', opis: '', poveznica: '', brojKomada: '', doseg: '', datoteke: [], rucno: {} };
   S.vid = V;
   var app = $('#app');
   app.innerHTML = '<button class="btn link back" id="natrag">' + I.lijevo + 'Natrag</button><h2>Novi element vidljivosti</h2>' +
@@ -693,23 +876,27 @@ function noviVidljivost() {
     '<datalist id="vOrgL">' + POZNATE_ORG.map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist>' +
     '<label class="polje" for="vNaslov">Naslov (naziv datoteke)</label><input class="unos" id="vNaslov" placeholder="npr. Poziv na prijavu">' +
     '<div id="vKomadi" class="hidden"><label class="polje" for="vBroj" id="vBrojLbl">Broj komada</label><input class="unos" type="number" min="1" id="vBroj"></div>' +
+    '<label class="polje" for="vDoseg">Doseg – broj pregleda ili dosegnutih osoba (neobavezno)</label><input class="unos" type="number" min="0" id="vDoseg">' +
     '<label class="polje" for="vLink">Poveznica (ako postoji)</label><input class="unos" type="url" id="vLink" placeholder="https://…">' +
     '<label class="polje" for="vOpis">Opis</label><div class="glas"><textarea class="unos" id="vOpis"></textarea>' + gumbMic('vOpis', true) + '</div>' +
     '<p class="muted small" id="vNaziv"></p></div>' +
     '<div class="card sekcija" id="vDokaz"><div class="glava"><span class="ikona">' + I.galerija + '</span><div class="t"><h3>Dokaz</h3><div class="muted">Snimka zaslona, fotografija plakata, video, PDF</div></div></div>' +
-    '<ul class="popis" id="vDat"></ul><div class="btnrow"><button class="btn primary" id="vKamera">' + I.foto + 'Fotografiraj</button><button class="btn ghost" id="vGalerija">' + I.galerija + 'Galerija</button></div>' + SAVJET_ISPUSTANJA + '</div>' +
+    '<div class="chips" id="vTreba"></div>' +
+    '<ul class="popis" id="vDat"></ul><div class="btnrow"><button class="btn primary" id="vKamera">' + I.foto + 'Fotografiraj</button><button class="btn ghost" id="vGalerija">' + I.galerija + 'Galerija</button></div>' +
+    '<div class="btnrow one"><button class="btn ghost" id="vRacun">' + I.lista + 'Dodaj račun dobavljača (PDF ili foto)</button></div>' + SAVJET_ISPUSTANJA + '</div>' +
     '<div class="btnrow one"><button class="btn gold" id="vSpremi">Spremi u Vidljivost</button></div>';
-  $('#natrag').onclick = pocetnaVidljivost;
+  $('#natrag').onclick = pre.kategorija ? function () { kvPregled(); } : pocetnaVidljivost;
   $('#vDatum').value = V.datum;
-  var polja = { kanal: '#vKanal', organizacija: '#vOrg', naslov: '#vNaslov', brojKomada: '#vBroj', poveznica: '#vLink', datum: '#vDatum', opis: '#vOpis' };
+  var polja = { kanal: '#vKanal', organizacija: '#vOrg', naslov: '#vNaslov', brojKomada: '#vBroj', poveznica: '#vLink', datum: '#vDatum', opis: '#vOpis', doseg: '#vDoseg' };
   Object.keys(polja).forEach(function (k) { $(polja[k]).addEventListener('input', function () { V[k] = $(polja[k]).value; V.rucno[k] = true; nazivPregled(); }); });
   $$('#vKat button').forEach(function (b) { b.onclick = function () { V.rucno.kategorija = true; odaberiKat(b.getAttribute('data-k')); }; });
   $('#vGlas').addEventListener('input', function () { protumaci($('#vGlas').value); });
   $('#vKamera').onclick = function () { odaberi('image/*', true, false, dodajDokaz); };
   $('#vGalerija').onclick = function () { odaberi('image/*,video/*,application/pdf', false, true, dodajDokaz); };
+  $('#vRacun').onclick = function () { odaberi('application/pdf,image/*', false, true, function (f) { dodajDokaz(f, 'racun'); }); };
   $('#vSpremi').onclick = spremiVidljivost;
-  zonaIspustanja($('#vDokaz'), dodajDokaz);
-  V.dodajDokaz = dodajDokaz;
+  zonaIspustanja($('#vDokaz'), function (f) { dodajDokaz(f); });
+  V.dodajDokaz = function (f) { dodajDokaz(f); };
   vezivoMic();
   $('#vGlas').addEventListener('change', crtajDokaze); $('#vOpis').addEventListener('change', crtajDokaze);
 
@@ -734,17 +921,27 @@ function noviVidljivost() {
   function nazivPregled() {
     var d = [V.datum || danas(), dio(V.kanal || 'Ostalo')];
     if (V.organizacija) d.push(dio(V.organizacija));
-    d.push(dio(V.naslov || 'Vidljivost'));
     var k = KATEGORIJE.filter(function (x) { return x.id === V.kategorija; })[0];
+    d.push(dio(V.naslov || (k ? k.naziv : 'Vidljivost')));
+    trebaPregled();
     $('#vNaziv').innerHTML = 'Spremit će se u <b>2. Vidljivost / ' + esc(k ? k.dulje : '…') + '</b> kao<br><b>' + esc(d.join('_')) + '_01.jpg</b>';
   }
+  function trebaPregled() {
+    var tr = DOKAZI[V.kategorija] || [];
+    if (!$('#vTreba')) return;
+    var foto = V.datoteke.filter(function (d) { return d.uloga !== 'racun'; }).length, rac = V.datoteke.some(function (d) { return d.uloga === 'racun'; });
+    $('#vTreba').innerHTML = tr.length ? '<span class="chip">Za dokaz treba:</span>' + tr.map(function (t) {
+      var ok = t === 'poveznica' ? !!(V.poveznica || '').trim() : t === 'racun' ? rac : foto > 0;
+      return '<span class="chip ' + (ok ? 'ok' : t === 'racun' ? 'gold' : 'warn') + '">' + (ok ? '✓ ' : '') + esc(DOKAZ_NAZIV[t]) + (t === 'racun' && !ok ? ' (jednom po narudžbi)' : '') + '</span>';
+    }).join('') : '';
+  }
   function dio(s) { return String(s || '').trim().replace(/[\\\/:*?"<>|#%\[\]]+/g, '').replace(/\s+/g, '_').slice(0, 60); }
-  function dodajDokaz(files) {
+  function dodajDokaz(files, uloga) {
     files.forEach(function (f) {
       var slika = /^image\//.test(f.type), video = /^video\//.test(f.type);
       uObradu(video ? 'Smanjujem video' : slika ? 'Smanjujem fotografiju' : 'Pripremam datoteku', function (napredak) {
         return Promise.all([thumbnail(f), slika ? smanjiFoto(f) : video ? smanjiVideo(f, napredak) : Promise.resolve({ blob: f, mime: f.type || 'application/octet-stream', ext: ekstenzija(f, 'bin') })]).then(function (r) {
-          V.datoteke.push({ ime: f.name, blob: r[1].blob, mime: r[1].mime, ext: r[1].ext, velicina: r[1].blob.size, thumb: r[0] });
+          V.datoteke.push({ ime: f.name, blob: r[1].blob, mime: r[1].mime, ext: r[1].ext, velicina: r[1].blob.size, thumb: r[0], uloga: uloga || 'dokaz' });
           if (S.vid === V) crtajDokaze();
         });
       });
@@ -755,13 +952,17 @@ function noviVidljivost() {
     Object.keys(S.snimke).forEach(function (k) { sve.push({ ime: 'Glasovna bilješka', velicina: S.snimke[k].size, glas: k }); });
     $('#vDat').innerHTML = sve.map(function (d, i) {
       return '<li>' + (d.thumb ? '<img class="th" src="' + d.thumb + '">' : '<span class="ph">' + (d.glas ? I.mic : I.lista) + '</span>') +
-        '<span class="ime">' + esc(d.ime) + '<br><span class="muted small">' + mb(d.velicina) + '</span></span>' +
+        '<span class="ime">' + esc(d.ime) + (d.uloga === 'racun' ? ' <span class="chip gold">račun</span>' : '') + '<br><span class="muted small">' + mb(d.velicina) + '</span></span>' +
         '<button class="x" data-i="' + i + '" data-g="' + (d.glas || '') + '">' + I.x + '</button></li>';
     }).join('');
     $$('#vDat .x').forEach(function (b) {
       b.onclick = function () { if (b.getAttribute('data-g')) delete S.snimke[b.getAttribute('data-g')]; else V.datoteke.splice(+b.getAttribute('data-i'), 1); crtajDokaze(); };
     });
+    trebaPregled();
   }
+  if (pre.kategorija) { V.rucno.kategorija = true; odaberiKat(pre.kategorija); }
+  if (pre.naslov) { V.naslov = pre.naslov; V.rucno.naslov = true; $('#vNaslov').value = pre.naslov; }
+  if (pre.racun) toast('Priložite račun dobavljača gumbom „Dodaj račun dobavljača”.', 4000);
   nazivPregled();
 }
 
@@ -773,14 +974,17 @@ function spremiVidljivost() {
   if (kat && kat.obavezanBroj && !(Number(V.brojKomada) > 0)) { toast('Upišite broj podijeljenih letaka.'); if ($('#vBroj')) $('#vBroj').focus(); return; }
   var glasovi = Object.keys(S.snimke).map(function (k) { return S.snimke[k]; });
   if (!V.datoteke.length && !glasovi.length && !V.poveznica && !confirm('Niste priložili nijedan dokaz (snimku zaslona, fotografiju). Ipak spremiti?')) return;
-  var dat = V.datoteke.map(function (d) { return { ime: d.ime, blob: d.blob, mime: d.mime, ext: d.ext, velicina: d.velicina }; });
+  var dat = V.datoteke.map(function (d) { return { ime: d.ime, blob: d.blob, mime: d.mime, ext: d.ext, velicina: d.velicina, uloga: d.uloga || 'dokaz' }; });
+  var brFoto = V.datoteke.filter(function (d) { return d.uloga !== 'racun'; }).length, brRac = V.datoteke.length - brFoto;
   glasovi.forEach(function (g) { dat.push({ ime: 'glasovna bilješka', blob: g, mime: g.type || 'audio/webm', ext: /mp4/.test(g.type) ? 'm4a' : 'webm', velicina: g.size }); });
-  var z = { kategorija: V.kategorija, datum: V.datum || danas(), kanal: V.kanal.trim(), organizacija: V.organizacija.trim(), naslov: V.naslov.trim(),
+  var z = { kategorija: V.kategorija, datum: V.datum || danas(), kanal: V.kanal.trim(), organizacija: V.organizacija.trim(), naslov: V.naslov.trim() || (kat ? kat.naziv : ''),
+    doseg: V.doseg ? Number(V.doseg) : '', dokazi: 'foto:' + brFoto + ';racun:' + brRac + ';poveznica:' + (V.poveznica.trim() ? 1 : 0),
     opis: (V.opis || '').trim() + (glasovi.length ? '\n[priložena glasovna bilješka]' : ''), poveznica: V.poveznica.trim(), brojKomada: V.brojKomada ? Number(V.brojKomada) : '' };
   var thumb = (V.datoteke.filter(function (d) { return d.thumb; })[0] || {}).thumb || '';
   ZP.uRed({ tip: 'vidljivost', z: z, datoteke: dat, thumb: thumb, ime: z.naslov || z.organizacija, velicina: dat.reduce(function (s, d) { return s + d.velicina; }, 0) }).then(function () {
     S.snimke = {};
     toast(naMrezi() ? 'Spremljeno – šaljem na Drive.' : 'Spremljeno na mobitel – poslat će se kad bude interneta.', 3500);
+    ZP.kesSpremi('kv_zapisi', null).catch(function () {});
     pocetnaVidljivost();
   }).catch(greska);
 }
@@ -789,7 +993,8 @@ function spremiVidljivost() {
 function parsirajGlas(tx) {
   var t = ' ' + norm(tx) + ' ', r = {};
   var ima = function (re) { return re.test(t); };
-  if (ima(/jumbo|city ?light|billboard|vanjsk/)) r.kategorija = 'vanjsko';
+  if (ima(/sastan|kvartaln/)) r.kategorija = 'sastanak';
+  else if (ima(/jumbo|city ?light|billboard|vanjsk/)) r.kategorija = 'vanjsko';
   else if (ima(/roll ?-?up|rolap|banner/)) r.kategorija = 'rollup';
   else if (ima(/\bvideo|snimk|reel|klip/)) r.kategorija = 'video';
   else if (ima(/plakat/)) r.kategorija = 'plakati';
@@ -847,6 +1052,7 @@ function pocetnaPrijave() {
   S.naPromjenuReda = null; S.prijaveTermin = null;
   var ym = S.prijaveMjesec;
   $('#app').innerHTML = '<h2>Prijave na aktivnosti</h2>' +
+    '<div class="btnrow one"><button class="btn gold" id="pNovaOsoba">' + I.plus + 'Prijava osobe na aktivnosti</button></div>' +
     '<div class="mjesec"><button class="iconbtn" id="pmPrev">' + I.lijevo + '</button><b>' + esc(nazivMj(ym)) + '</b><button class="iconbtn" id="pmNext">' + I.desno + '</button></div>' +
     '<div id="pCekaju"></div>' +
     '<div class="card"><h3>Mjesečne prijavnice za potpis</h3><p class="muted small">Jedan PDF: za svaku osobu prijavnica sa svim aktivnostima u mjesecu (bez potpisa) – ispišite i dajte na potpis.</p>' +
@@ -854,6 +1060,7 @@ function pocetnaPrijave() {
     '<div><button class="btn primary full" id="pIspis">' + I.ispis + 'Izradi PDF</button></div></div>' +
     '<label class="osoba" style="border:0"><input type="checkbox" id="pSamoNep" checked><span class="ime small">Samo prijave bez elektroničkog potpisa</span></label><div id="pIspisRez"></div></div>' +
     '<div id="pTermini"><div class="spinner"></div></div>';
+  $('#pNovaOsoba').onclick = prijavaOsobe;
   $('#pmPrev').onclick = function () { S.prijaveMjesec = pomakniMj(ym, -1); pocetnaPrijave(); };
   $('#pmNext').onclick = function () { S.prijaveMjesec = pomakniMj(ym, 1); pocetnaPrijave(); };
   $('#pIspis').onclick = function () {
@@ -912,10 +1119,12 @@ function otvoriPrijaveTermina(t) {
     '<details style="margin-top:10px"><summary class="small">Osoba nije u bazi – dodaj novu</summary><div class="dvoje"><div><input class="unos" id="nIme" placeholder="Ime"></div><div><input class="unos" id="nPrezime" placeholder="Prezime"></div></div>' +
     '<div class="dvoje" style="margin-top:8px"><div><input class="unos" id="nGod" type="number" placeholder="Godina rođenja"></div><div><button class="btn ghost full" id="nDodaj">' + I.plus + 'Dodaj</button></div></div></details>' +
     '<label class="osoba"><input type="radio" name="nacin" value="potpisna" checked><span class="ime small">S potpisne liste (datum i vrijeme termina)</span></label>' +
-    '<label class="osoba"><input type="radio" name="nacin" value="rucno"><span class="ime small">Prijava danas (sadašnje vrijeme)</span></label>' +
+    '<label class="osoba"><input type="radio" name="nacin" value="rucno"><span class="ime small">Prijava bez potpisa – odabrani datum prijave</span></label>' +
+    '<div class="dvoje hidden" id="pDatumPr"><div><input class="unos" type="date" id="pDP"></div><div><input class="unos" type="time" id="pVP"></div></div>' +
     '<div class="btnrow one"><button class="btn gold" id="pSpremi">Upiši prijave</button></div></div>';
   $('#natrag').onclick = pocetnaPrijave;
-  $$('input[name=nacin]').forEach(function (r) { r.onchange = function () { P.nacin = r.value; }; });
+  $$('input[name=nacin]').forEach(function (r) { r.onchange = function () { P.nacin = r.value; $('#pDatumPr').classList.toggle('hidden', P.nacin !== 'rucno'); }; });
+  (function () { var d = new Date(); $('#pDP').value = danas(); $('#pVP').value = pad(d.getHours()) + ':' + pad(d.getMinutes()); })();
   var crtajOdabrane = function () {
     var sve = P.odabrani.map(function (k, i) { return '<span>' + (i + 1) + '. ' + esc(k.prezime + ' ' + k.ime) + '<b data-i="' + i + '">×</b></span>'; })
       .concat(P.novi.map(function (n, i) { return '<span>' + (P.odabrani.length + i + 1) + '. ' + esc(n.prezime + ' ' + n.ime) + ' (nova)<b data-n="' + i + '">×</b></span>'; }));
@@ -950,7 +1159,7 @@ function otvoriPrijaveTermina(t) {
   };
   $('#pSpremi').onclick = function () {
     if (!P.odabrani.length && !P.novi.length) { toast('Niste odabrali nijednu osobu.'); return; }
-    ZP.uRed({ tip: 'prijave', p: { termin: t, korisnici: P.odabrani.map(function (k) { return k.id; }), novi: P.novi, nacin: P.nacin, imena: P.odabrani.map(function (k) { return k.prezime + ' ' + k.ime; }) },
+    ZP.uRed({ tip: 'prijave', p: { termin: t, korisnici: P.odabrani.map(function (k) { return k.id; }), novi: P.novi, nacin: P.nacin, datumPrijave: P.nacin === 'rucno' ? $('#pDP').value : '', vrijemePrijave: P.nacin === 'rucno' ? $('#pVP').value : '', imena: P.odabrani.map(function (k) { return k.prezime + ' ' + k.ime; }) },
       ime: (P.odabrani.length + P.novi.length) + ' prijava · ' + (t.kratko || t.aktivnost) + ' ' + kratkiDatum(t.datum) }).then(function () {
       toast(naMrezi() ? 'Upisujem prijave…' : 'Prijave spremljene na mobitel – upisat će se kad bude interneta.', 3500);
       P.odabrani = []; P.novi = []; crtajOdabrane(); crtajListu();
@@ -968,8 +1177,8 @@ function otvoriPrijaveTermina(t) {
       if (liste.length || stDat.length) html += '<p class="small">Potpisna lista: ' + (liste.length ? liste : stDat).map(function (x) { return '<a href="' + (x.url) + '" target="_blank" rel="noopener">' + esc(x.naziv) + '</a>'; }).join(', ') + '</p>';
       html += pr.length ? '<ul class="popis">' + pr.map(function (p, i) {
         return '<li><span class="rb" style="width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:13px;flex:none">' + (i + 1) + '</span><span class="ime">' + esc(p.prezime + ' ' + p.ime) +
-          '<br><span class="muted small">' + esc(p.datum ? kratkiDatum(p.datum) : '') + ' ' + esc(p.vrijeme) + ' · ' + (p.nacin === 'potpisna' ? 's potpisne liste' : p.nacin === 'aplikacija' ? 'aplikacija (potpisano)' : 'upis') + '</span></span>' +
-          (/^PL-/.test(p.idPrijave) ? '<button class="x" data-uk="' + esc(p.idKorisnika) + '" aria-label="Ukloni">' + I.x + '</button>' : '') + '</li>';
+          '<br><span class="muted small">' + esc(p.datum ? kratkiDatum(p.datum) : '') + ' ' + esc(p.vrijeme) + ' · ' + (p.nacin === 'potpisna' ? 's potpisne liste' : p.nacin === 'aplikacija' ? 'aplikacija (potpisano)' : p.nacin === 'bezpotpisa' ? 'prijava bez potpisa' : 'upis') + '</span></span>' +
+          (/^P[LR]-/.test(p.idPrijave) ? '<button class="x" data-uk="' + esc(p.idKorisnika) + '" aria-label="Ukloni">' + I.x + '</button>' : '') + '</li>';
       }).join('') + '</ul>' : '<p class="muted">Još nema prijava.</p>';
       if (r[1].length) html += '<h3 style="margin-top:12px">Čeka upis s mobitela</h3><ul class="popis">' + r[1].map(function (q) {
         q.naziv = (q.p.imena || []).concat((q.p.novi || []).map(function (n) { return n.prezime + ' ' + n.ime + ' (nova)'; })).join(', ');
@@ -1000,6 +1209,125 @@ function otvoriPrijaveTermina(t) {
   crtajOdabrane(); crtajListu();
 }
 
+/** Prijava jedne osobe na više aktivnosti (kao u aplikaciji „Prijave na aktivnosti”) – bez potpisa, s odabranim datumom prijave. */
+function prijavaOsobe() {
+  S.naPromjenuReda = null; S.osvjezi = null; S.prijaveTermin = { kljuc: '_osoba' };
+  var sad = new Date();
+  var P = { osoba: null, novi: null, datum: danas(), vrijeme: pad(sad.getHours()) + ':' + pad(sad.getMinutes()), termini: {}, opce: {}, ym: S.prijaveMjesec, lok: '' };
+  $('#app').innerHTML = '<button class="btn link back" id="natrag">' + I.lijevo + 'Prijave</button><h2>Prijava na aktivnosti</h2>' +
+    '<p class="muted small">Osoba iz baze (ili nova), odabrani datum prijave, bez potpisa. Potpisuje se kasnije na mjesečnoj prijavnici.</p>' +
+    '<div class="card"><h3>1. Osoba</h3><div class="odabrani" id="poOsoba"></div>' +
+    '<input class="unos" id="poTrazi" placeholder="Prezime ili ime…" autocomplete="off"><div id="poRez"></div>' +
+    '<details style="margin-top:10px" id="poNovaD"><summary class="small">Osoba nije u bazi – upiši novu</summary>' +
+    '<div class="dvoje"><div><input class="unos" id="poIme" placeholder="Ime"></div><div><input class="unos" id="poPrez" placeholder="Prezime"></div></div>' +
+    '<div class="dvoje" style="margin-top:8px"><div><input class="unos" id="poGod" type="number" placeholder="Godina rođenja"></div><div><input class="unos" id="poNas" placeholder="Naselje"></div></div>' +
+    '<div class="btnrow one"><button class="btn ghost" id="poNovaOK">' + I.plus + 'Koristi ovu osobu</button></div></details></div>' +
+    '<div class="card"><h3>2. Datum prijave</h3><div class="dvoje"><div><label class="polje" for="poDatum">Datum</label><input class="unos" type="date" id="poDatum"></div>' +
+    '<div><label class="polje" for="poVrij">Vrijeme</label><input class="unos" type="time" id="poVrij"></div></div></div>' +
+    '<div class="card"><h3>3. Termini</h3><div class="mjesec"><button class="iconbtn" id="poPrev">' + I.lijevo + '</button><b id="poMj"></b><button class="iconbtn" id="poNext">' + I.desno + '</button></div>' +
+    '<select class="unos" id="poLok"><option value="">Sve lokacije</option>' + LOKACIJE.map(function (l) { return '<option>' + l + '</option>'; }).join('') + '</select>' +
+    '<div id="poTermini"><div class="spinner"></div></div></div>' +
+    '<div class="card"><h3>4. Opća prijava (termin naknadno)</h3><p class="muted small">Za aktivnosti bez određenog termina.</p>' +
+    '<select class="unos" id="poOLok">' + LOKACIJE.map(function (l) { return '<option>' + l + '</option>'; }).join('') + '</select><div id="poOpce"></div></div>' +
+    '<div class="card"><div id="poSazetak" class="small"></div><div class="btnrow one"><button class="btn gold" id="poSpremi">Prijavi</button></div></div>';
+  $('#natrag').onclick = function () { S.prijaveTermin = null; pocetnaPrijave(); };
+  $('#poDatum').value = P.datum; $('#poVrij').value = P.vrijeme;
+  $('#poDatum').onchange = function () { P.datum = $('#poDatum').value; sazetak(); };
+  $('#poVrij').onchange = function () { P.vrijeme = $('#poVrij').value; sazetak(); };
+  $('#poPrev').onclick = function () { P.ym = pomakniMj(P.ym, -1); crtajTermine(); };
+  $('#poNext').onclick = function () { P.ym = pomakniMj(P.ym, 1); crtajTermine(); };
+  $('#poLok').onchange = function () { P.lok = $('#poLok').value; crtajTermine(); };
+  $('#poOLok').onchange = crtajOpce;
+
+  function crtajOsobu() {
+    var o = P.osoba ? P.osoba.prezime + ' ' + P.osoba.ime + (P.osoba.god ? ' (' + P.osoba.god + ')' : '') : P.novi ? P.novi.prezime + ' ' + P.novi.ime + ' (nova)' : '';
+    $('#poOsoba').innerHTML = o ? '<span>' + esc(o) + '<b id="poMakni">×</b></span>' : '<p class="muted small">Odaberite osobu.</p>';
+    if ($('#poMakni')) $('#poMakni').onclick = function () { P.osoba = P.novi = null; crtajOsobu(); };
+    sazetak();
+  }
+  korisnici().then(function (lista) {
+    $('#poTrazi').oninput = function () {
+      var u = norm($('#poTrazi').value);
+      if (u.length < 2) { $('#poRez').innerHTML = ''; return; }
+      var dij = u.split(/\s+/);
+      var rez = lista.filter(function (k) { var s = norm(k.prezime + ' ' + k.ime); return dij.every(function (d) { return s.indexOf(d) >= 0; }); }).slice(0, 12);
+      $('#poRez').innerHTML = rez.map(function (k) {
+        return '<div class="osoba" data-id="' + esc(k.id) + '"><span class="ime"><b>' + esc(k.prezime) + '</b> ' + esc(k.ime) + '<br><span class="muted small">' + esc([k.id, k.god, k.naselje].filter(String).join(' · ')) + '</span></span>' + I.plus + '</div>';
+      }).join('') || '<p class="muted small">Nema takve osobe – upišite je kao novu.</p>';
+      $$('#poRez .osoba').forEach(function (el) {
+        el.onclick = function () { P.osoba = lista.filter(function (x) { return x.id === el.getAttribute('data-id'); })[0]; P.novi = null; $('#poTrazi').value = ''; $('#poRez').innerHTML = ''; crtajOsobu(); };
+      });
+    };
+  }).catch(function (e) { $('#poRez').innerHTML = '<p class="status-err small">' + esc(e.message) + '</p>'; });
+  $('#poNovaOK').onclick = function () {
+    var ime = $('#poIme').value.trim(), prez = $('#poPrez').value.trim();
+    if (!ime || !prez) { toast('Upišite ime i prezime.'); return; }
+    P.novi = { ime: ime, prezime: prez, god: $('#poGod').value.trim(), naselje: $('#poNas').value.trim() }; P.osoba = null;
+    $('#poNovaD').open = false; crtajOsobu();
+  };
+
+  function crtajTermine() {
+    $('#poMj').textContent = nazivMj(P.ym);
+    $('#poTermini').innerHTML = '<div class="spinner"></div>';
+    terminiMjeseca(P.ym).then(function (tt) {
+      if (!$('#poTermini')) return;
+      tt = tt.filter(function (t) { return !P.lok || t.lokacija === P.lok; });
+      var poDanu = {};
+      tt.forEach(function (t) { (poDanu[t.datum] = poDanu[t.datum] || []).push(t); });
+      $('#poTermini').innerHTML = Object.keys(poDanu).sort().map(function (d) {
+        return '<div class="small" style="margin-top:10px;font-weight:700;color:var(--navy)">' + esc(lijepDatum(d)) + '</div>' + poDanu[d].map(function (t) {
+          return '<label class="osoba"><input type="checkbox" data-k="' + esc(t.kljuc) + '"' + (P.termini[t.kljuc] ? ' checked' : '') + '><span class="ime"><b>' + esc(t.pocetak) + '</b> ' + esc(t.kratko || t.aktivnost) +
+            '<br><span class="muted small">' + esc(t.sifra + ' · ' + t.lokacija + (t.mjesto ? ' · ' + t.mjesto : '')) + '</span></span></label>';
+        }).join('');
+      }).join('') || '<p class="muted">Nema termina.</p>';
+      $$('#poTermini input[data-k]').forEach(function (c) {
+        c.onchange = function () { var t = tt.filter(function (x) { return x.kljuc === c.getAttribute('data-k'); })[0]; if (c.checked) P.termini[t.kljuc] = t; else delete P.termini[t.kljuc]; sazetak(); };
+      });
+    }).catch(function (e) { $('#poTermini').innerHTML = '<p class="status-err small">' + esc(e.message) + '</p>'; });
+  }
+  var AKT = null;
+  function crtajOpce() {
+    var lok = $('#poOLok').value;
+    var pr = AKT ? Promise.resolve(AKT) : sKesom('aktivnosti_prijave', 'aktivnostiPrijave', []).then(function (a) { AKT = a; return a; });
+    pr.then(function (a) {
+      if (!$('#poOpce')) return;
+      a = a.filter(function (x) { return !x.lokacije || !x.lokacije.length || x.lokacije.indexOf(lok) >= 0; });
+      $('#poOpce').innerHTML = a.map(function (x) {
+        var k = x.sifra + '|' + x.aktivnost + '|' + lok;
+        return '<label class="osoba"><input type="checkbox" data-o="' + esc(k) + '"' + (P.opce[k] ? ' checked' : '') + '><span class="ime">' + esc(x.aktivnost) + '<br><span class="muted small">' + esc(x.sifra + ' · ' + lok) + '</span></span></label>';
+      }).join('');
+      $$('#poOpce input[data-o]').forEach(function (c) {
+        c.onchange = function () { var d = c.getAttribute('data-o').split('|'); if (c.checked) P.opce[c.getAttribute('data-o')] = { sifra: d[0], aktivnost: d[1], lokacija: d[2] }; else delete P.opce[c.getAttribute('data-o')]; sazetak(); };
+      });
+    }).catch(function (e) {
+      $('#poOpce').innerHTML = '<p class="muted small">' + esc(/Nepoznata akcija/.test(e.message) ? 'Opća prijava radi nakon objave nove verzije API-ja.' : e.message) + '</p>';
+    });
+  }
+  function sazetak() {
+    var nT = Object.keys(P.termini).length, nO = Object.keys(P.opce).length;
+    var o = P.osoba ? P.osoba.prezime + ' ' + P.osoba.ime : P.novi ? P.novi.prezime + ' ' + P.novi.ime : '—';
+    $('#poSazetak').innerHTML = '<b>' + esc(o) + '</b> · prijava ' + esc(P.datum ? kratkiDatum(P.datum) + P.datum.slice(0, 4) + '.' : '') + ' u ' + esc(P.vrijeme || '') +
+      '<br>Termina: <b>' + nT + '</b> · općih prijava: <b>' + nO + '</b>';
+    $('#poSpremi').textContent = 'Prijavi (' + (nT + nO) + ')';
+  }
+  $('#poSpremi').onclick = function () {
+    if (!P.osoba && !P.novi) { toast('Odaberite osobu.'); return; }
+    if (!P.datum) { toast('Odaberite datum prijave.'); return; }
+    var tt = Object.keys(P.termini).map(function (k) { return P.termini[k]; }), oo = Object.keys(P.opce).map(function (k) { return P.opce[k]; });
+    if (!tt.length && !oo.length) { toast('Odaberite barem jedan termin ili aktivnost.'); return; }
+    var kasni = tt.filter(function (t) { return t.datum < P.datum; });
+    if (kasni.length && !confirm('Datum prijave je nakon ' + kasni.length + ' odabranih termina. Ipak spremiti?')) return;
+    var ime = P.osoba ? P.osoba.prezime + ' ' + P.osoba.ime : P.novi.prezime + ' ' + P.novi.ime + ' (nova)';
+    ZP.uRed({ tip: 'prijavaOsobe', p: { korisnik: P.osoba ? P.osoba.id : null, novi: P.novi, datum: P.datum, vrijeme: P.vrijeme, termini: tt, opce: oo },
+      ime: ime + ' · ' + (tt.length + oo.length) + ' aktivnosti' }).then(function () {
+      toast(naMrezi() ? 'Prijavljujem: ' + ime : 'Spremljeno na mobitel – upisat će se kad bude interneta.', 3500);
+      P.osoba = P.novi = null; P.termini = {}; P.opce = {};
+      crtajOsobu(); crtajTermine(); crtajOpce();
+    }).catch(greska);
+  };
+  crtajOsobu(); crtajTermine(); crtajOpce();
+}
+
 /* ═══ 4. SLANJE I POSTAVKE ═══════════════════════════════════════════ */
 function pocetnaSlanje() {
   var crtaj = function () {
@@ -1012,11 +1340,12 @@ function pocetnaSlanje() {
         if (q.tip === 'napomena') return 'Napomena · ' + (q.termin.kratko || q.termin.aktivnost) + ' ' + kratkiDatum(q.termin.datum);
         if (q.tip === 'vidljivost') return 'Vidljivost · ' + (q.z.naslov || q.z.organizacija || q.z.kategorija) + ' (' + (q.datoteke || []).length + ' dat.)';
         if (q.tip === 'prijave') return 'Prijave · ' + q.ime;
+        if (q.tip === 'prijavaOsobe') return 'Prijava osobe · ' + q.ime;
         return q.ime;
       };
       var html = '<h2>Slanje</h2><div class="card"><div class="naslovTaba"><h3>' + (ceka.length ? 'Čeka slanje: ' + ceka.length : 'Sve je poslano ✓') + '</h3></div>' +
         (!naMrezi() ? '<div class="obavijest warn">Mobitel nije na internetu. Sve je sigurno spremljeno na mobitelu i poslat će se samo čim se spojite.</div>' : '') +
-        (red.length ? '<ul class="popis">' + red.slice(0, 40).map(function (q) { q.naziv = opis(q); return stavkaRedaHtml(q.tip === 'prijave' ? I.lista : q.vrsta === 'video' ? I.video : I.foto, q); }).join('') + '</ul>' : '') +
+        (red.length ? '<ul class="popis">' + red.slice(0, 40).map(function (q) { q.naziv = opis(q); return stavkaRedaHtml(q.tip === 'prijave' || q.tip === 'prijavaOsobe' ? I.lista : q.vrsta === 'video' ? I.video : I.foto, q); }).join('') + '</ul>' : '') +
         '<div class="btnrow one"><button class="btn primary" id="sSada">Pošalji sada</button></div>' +
         (pr ? '<p class="muted small">Zauzeto na mobitelu: ' + mb(pr.usage || 0) + '</p>' : '') + '</div>';
       html += '<div class="card"><h3>Povezivanje s Driveom</h3>' +
@@ -1054,7 +1383,7 @@ function preuzmiPodatke() {
   var el = $('#pPreuzmiRez'); if (el) el.innerHTML = '<div class="spinner"></div>';
   var ym = danas().slice(0, 7);
   return Promise.all([terminiMjeseca(pomakniMj(ym, -1), true), terminiMjeseca(ym, true), terminiMjeseca(pomakniMj(ym, 1), true), korisnici(true),
-    prijaveMjeseca(ym, true), sKesom('vid_pregled', 'vidljivostPregled', [new Date().getFullYear()], true)]).then(function (r) {
+    prijaveMjeseca(ym, true), sKesom('aktivnosti_prijave', 'aktivnostiPrijave', [], true).catch(function () { return []; }), sKesom('vid_pregled', 'vidljivostPregled', [new Date().getFullYear()], true)]).then(function (r) {
     if ($('#pPreuzmiRez')) $('#pPreuzmiRez').innerHTML = '<div class="obavijest ok">Spremljeno: ' + (r[0].length + r[1].length + r[2].length) + ' termina, ' + r[3].length + ' korisnika.</div>';
   }).catch(function (e) { if ($('#pPreuzmiRez')) $('#pPreuzmiRez').innerHTML = '<div class="obavijest bad">' + esc(e.message) + '</div>'; });
 }
