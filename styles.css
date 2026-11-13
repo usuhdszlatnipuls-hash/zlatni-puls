@@ -167,7 +167,7 @@
   .mreza.off { background: var(--warn-soft); color: var(--warn); }
   .mreza.salje { background: #eaf0fb; color: var(--navy); }
   nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: #fff; border-top: 1px solid var(--line);
-    display: grid; grid-template-columns: repeat(4, 1fr); padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -4px 16px rgba(15,47,107,.06); }
+    display: grid; grid-template-columns: repeat(6, 1fr); padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -4px 16px rgba(15,47,107,.06); }
   nav.tabs button { border: 0; background: none; padding: 8px 2px 10px; display: grid; justify-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; min-height: 62px; }
   nav.tabs button svg { width: 24px; height: 24px; }
   nav.tabs button.on { color: var(--navy); }
@@ -219,3 +219,33 @@
   .drop-on { outline: 3px dashed var(--gold); outline-offset: 2px; background: var(--gold-soft) !important; }
   .savjet-drop { margin: 8px 0 0; }
   @media (hover: none) and (pointer: coarse) { .savjet-drop { display: none; } }
+
+/* Hodogram i Pregled */
+nav.tabs button { font-size: 11px; }
+.hodWrap, .tabWrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 6px -6px 0; }
+table.hod { border-collapse: collapse; font-size: 11px; }
+table.hod th, table.hod td { border: 1px solid var(--line); padding: 0; text-align: center; min-width: 28px; height: 24px; }
+table.hod thead th { background: var(--navy); color: #fff; font-weight: 700; padding: 3px 2px; line-height: 1.1; }
+table.hod thead th span { font-weight: 400; font-size: 9px; opacity: .8; }
+table.hod tbody th { position: sticky; left: 0; z-index: 1; background: #fff; text-align: left; font-weight: 600; padding: 3px 6px; min-width: 210px; max-width: 210px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+table.hod thead th:first-child { position: sticky; left: 0; z-index: 2; text-align: left; padding-left: 6px; }
+table.hod tr.grp th, table.hod tr.grp td { background: #eef1f7; color: var(--navy); font-weight: 800; }
+table.hod td.on { background: var(--gold-soft); color: #7a5a0c; font-weight: 700; }
+table.hod td.on.prosl { background: #f3e6c0; }
+table.hod .sad { outline: 2px solid var(--gold); outline-offset: -2px; }
+table.hod .ostv { display: inline-block; min-width: 18px; border-radius: 9px; background: var(--navy); color: #fff; font-size: 10px; padding: 1px 3px; }
+.hPost { color: var(--navy); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 12px 0; }
+.kpi { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); }
+.kpi b { display: block; font-size: 26px; color: var(--navy); line-height: 1.1; }
+.kpi span { font-size: 12px; color: var(--muted); }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 8px; }
+.seg button { flex: 1; min-height: 42px; border-radius: 12px; border: 1.5px solid var(--navy); background: var(--card); color: var(--navy); font-weight: 700; cursor: pointer; }
+.seg button.on { background: var(--navy); color: #fff; }
+input.trazi { width: 100%; min-height: 46px; border-radius: 12px; border: 1px solid var(--line); padding: 8px 12px; font-size: 16px; box-sizing: border-box; }
+.pgL details summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; cursor: pointer; list-style: none; }
+.pgL details summary .ime { flex: 1 1 220px; }
+.pgL details ol, .pgL details ul { margin: 6px 0 4px 18px; padding: 0; }
+table.pgT { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.pgT th, table.pgT td { border-bottom: 1px solid var(--line); padding: 6px; text-align: left; vertical-align: top; }
+table.pgT th { color: var(--muted); font-weight: 700; font-size: 12px; }
