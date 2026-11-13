@@ -196,6 +196,7 @@ ZP.obradi = function (q) {
     q.p.cid = q.cid;
     return ZP.api('dodajPrijave', q.p);
   }
+  if (q.tip === 'obrasci') return ZP.api('obrasciKorisnika', q.p);
   if (q.tip === 'prijavaOsobe') {
     q.p.cid = q.cid;
     return ZP.api('prijaviOsobu', q.p).then(function (r) {
