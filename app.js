@@ -3,7 +3,7 @@
    Provedba aktivnosti · Komunikacija i vidljivost · Prijave na aktivnosti
    Sve se sprema na mobitel i šalje na Drive kad ima interneta.
    ═══════════════════════════════════════════════════════════════════════ */
-var VERZIJA_APP = '2026-11-13c';
+var VERZIJA_APP = '2026-11-13d';
 var DANI = ['nedjelja', 'ponedjeljak', 'utorak', 'srijeda', 'četvrtak', 'petak', 'subota'];
 var MJ = ['siječanj', 'veljača', 'ožujak', 'travanj', 'svibanj', 'lipanj', 'srpanj', 'kolovoz', 'rujan', 'listopad', 'studeni', 'prosinac'];
 var MJ_GEN = ['siječnja', 'veljače', 'ožujka', 'travnja', 'svibnja', 'lipnja', 'srpnja', 'kolovoza', 'rujna', 'listopada', 'studenoga', 'prosinca'];
@@ -244,9 +244,9 @@ function redZa(filter) { return ZP.redSvi().then(function (svi) { return svi.fil
 function postaviTab(tab) {
   S.tab = tab; S.osvjezi = null;
   $$('#tabs button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-tab') === tab); });
-  $('#podnaslov').textContent = { provedba: 'Provedba aktivnosti', vidljivost: 'Komunikacija i vidljivost', prijave: 'Prijave na aktivnosti', slanje: 'Slanje i postavke' }[tab];
+  $('#podnaslov').textContent = { provedba: 'Provedba aktivnosti', vidljivost: 'Komunikacija i vidljivost', prijave: 'Prijave na aktivnosti', hodogram: 'Hodogram i pokazatelji', pregled: 'Pregled evidencije', slanje: 'Slanje i postavke' }[tab];
   window.scrollTo(0, 0);
-  ({ provedba: pocetnaProvedba, vidljivost: pocetnaVidljivost, prijave: pocetnaPrijave, slanje: pocetnaSlanje })[tab]();
+  ({ provedba: pocetnaProvedba, vidljivost: pocetnaVidljivost, prijave: pocetnaPrijave, hodogram: pocetnaHodogram, pregled: pocetnaPregled, slanje: pocetnaSlanje })[tab]();
 }
 /** Kamo idu datoteke ispuštene/zalijepljene izvan zona: otvoreni termin ili novi element vidljivosti. */
 function ciljUmetanja() {
@@ -768,6 +768,204 @@ function kvHtml(R, g) {
   h.push('<div class="card"><h3>Gdje se sprema</h3><p class="small">Drive › Zlatni puls – provedba › <b>2. Vidljivost</b> › mapa vrste. Naziv se slaže sam i počinje danom objave:<br>' +
     '<b>2026-11-13_FB_Crveni_križ_Dugo_Selo_Poziv_na_radionice_01.jpg</b><br>račun: <b>…_Račun_dobavljača_Racun_01.pdf</b>, zapis: <b>…_zapis.pdf</b>. Evidencija je u tablici, list „Vidljivost”.</p></div>');
   return h.join('');
+}
+
+/* ═══ 5. HODOGRAM I POKAZATELJI ═════════════════════════════════════ */
+/* Hodogram iz Projektne tablice (list „Hodogram”, prema prijavnom obrascu): [naziv, {mjesec: oznaka}] */
+var HODOGRAM = [["A1 AKTIVNOSTI EDUKACIJE OCD-a ZA PROVEDBU PROGRAMA AKTIVNOG STARENJA",{}],["A1.0 Organizacija edukacija, poziv i odabir 10 polaznika/volontera",{"1":"X"}],["A1.1 Osnove gerontologije – 12 sati",{"1":"12"}],["A1.2 Andragogija – kako voditi radionice za starije – 8 sati",{"2":"8"}],["A1.3 Pristupačnost za osobe s invaliditetom – 4 sata",{"2":"4"}],["A1.4 Tehnologija za zdrav život – 4 sata",{"2":"4"}],["A1.5 Digitalna fotografija i fotoknjige – 2 dana × 3 sata",{"3":"6"}],["A1.6 Recikliranje kao kreativni izraz – 2 dana × 3 sata",{"3":"6"}],["A1.7 Horizontalna načela, inkluzija, zeleno i digitalno – 3 × 3 sata",{"3":"9"}],["A2 PROGRAM AKTIVNOG STARENJA",{}],["A2.0 Javni poziv, prijave sudionika, provjera ciljne skupine i revizijski trag odabira",{"1":"X","2":"X","3":"X","4":"X","5":"X","6":"X","7":"X","8":"X","9":"X","10":"X","11":"X","12":"X","13":"X","14":"X","15":"X","16":"X","17":"X","18":"X","19":"X","20":"X","21":"X","22":"X","23":"X","24":"X","25":"X","26":"X","27":"X","28":"X","29":"X","30":"X","31":"X","32":"X","33":"X","34":"X","35":"X","36":"X"}],["A2.1 Medijska pismenost i zaštita od financijskih prijevara – ciklusi po lokacijama",{"4":"10","5":"10","6":"10","16":"10","17":"10","18":"10","28":"10","29":"10","30":"10"}],["A2.1 Informatička pismenost – početni tečaj",{"7":"20","8":"20","19":"20","20":"20","31":"20","32":"20"}],["A2.1 Informatička pismenost – napredni tečaj",{"9":"20","10":"20","21":"20","22":"20","33":"20","34":"20"}],["A2.2.1 Kognitivne i sportsko-rekreativne aktivnosti – 3 lokacije, 2× tjedno tijekom 10 mjeseci/god.",{"4":"24","5":"24","6":"24","7":"24","8":"24","9":"24","10":"24","11":"24","12":"24","13":"24","16":"24","17":"24","18":"24","19":"24","20":"24","21":"24","22":"24","23":"24","24":"24","25":"24","28":"24","29":"24","30":"24","31":"24","32":"24","33":"24","34":"24","35":"24","36":"24"}],["A2.2.1 Vježbe u vodi – 2× mjesečno tijekom cijele godine",{"4":"2","5":"2","6":"2","7":"2","8":"2","9":"2","10":"2","11":"2","12":"2","13":"2","14":"2","15":"2","16":"2","17":"2","18":"2","19":"2","20":"2","21":"2","22":"2","23":"2","24":"2","25":"2","26":"2","27":"2","28":"2","29":"2","30":"2","31":"2","32":"2","33":"2","34":"2","35":"2","36":"2"}],["A2.2.2 Društvene, kognitivne i društveno-korisne aktivnosti protiv usamljenosti",{"4":"8","5":"8","6":"8","7":"8","8":"8","9":"8","10":"8","11":"8","12":"8","13":"8","14":"8","15":"8","16":"8","17":"8","18":"8","19":"8","20":"8","21":"8","22":"8","23":"8","24":"8","25":"8","26":"8","27":"8","28":"8","29":"8","30":"8","31":"8","32":"8","33":"8","34":"8","35":"8","36":"8"}],["A2.2.2 Kreativno-praktične i „uradi sam“ aktivnosti usmjerene na funkcionalne vještine i socijalizaciju",{"4":"8","5":"8","6":"8","7":"8","8":"8","9":"8","10":"8","11":"8","12":"8","13":"8","14":"8","15":"8","16":"8","17":"8","18":"8","19":"8","20":"8","21":"8","22":"8","23":"8","24":"8","25":"8","26":"8","27":"8","28":"8","29":"8","30":"8","31":"8","32":"8","33":"8","34":"8","35":"8","36":"8"}],["A2.2.3 Javne manifestacije za prevenciju bolesti i promicanje zdravlja (mjerenja, sportske igre, akcije)",{"1":"1","6":"1","12":"1","18":"1","24":"1","30":"1","36":"1"}],["A3 INDIVIDUALNA STRUČNA SAVJETOVANJA ZA STARIJE OSOBE I/ILI UMIROVLJENIKE",{}],["A3.1 Besplatna pravna pomoć – individualna savjetovanja",{"4":"6","5":"6","6":"6","7":"6","8":"6","9":"6","10":"6","11":"6","12":"6","13":"6","14":"6","16":"6","17":"6","18":"6","19":"6","20":"6","21":"6","22":"6","23":"6","24":"6","25":"6","26":"6","28":"6","29":"6","30":"6","31":"6","32":"6","33":"6","34":"6","35":"6"}],["A3.2 Savjetovanja prema iskazanim potrebama: psihološko-zdravstveno, nutricionističko, socijalno",{"4":"6","5":"6","6":"6","7":"6","8":"6","9":"6","10":"6","11":"6","12":"6","13":"6","14":"6","16":"6","17":"6","18":"6","19":"6","20":"6","21":"6","22":"6","23":"6","24":"6","25":"6","26":"6","28":"6","29":"6","30":"6","31":"6","32":"6","33":"6","34":"6","35":"6"}],["A4 INFORMIRANJE STARIJIH OSOBA I/ILI UMIROVLJENIKA – INFO KUTCI",{}],["A4.1 Uspostava i objava otvaranja info kutka na lokacijama prijavitelja i partnera",{"1":"X","2":"X"}],["A4.2 Informiranja u info kutku – zdravlje, socijalna prava, rad nakon mirovine, dostupne usluge",{"3":"12","4":"12","5":"12","6":"12","7":"12","8":"12","9":"12","10":"12","11":"12","12":"12","13":"12","14":"12","15":"12","16":"12","17":"12","18":"12","19":"12","20":"12","21":"12","22":"12","23":"12","24":"12","25":"12","26":"12","27":"12","28":"12","29":"12","30":"12","31":"12","32":"12","33":"12","34":"12","35":"12","36":"12"}],["A4.3 Upitnici/izjave korisnika i godišnji izvještaji o informiranju",{"12":"G","24":"G","36":"G"}],["KOMUNIKACIJA I VIDLJIVOST",{}],["KV.1 Objava o potpori dobivenoj iz ESF+ na mrežnim stranicama prijavitelja i partnera",{"1":"1","13":"1","25":"1"}],["KV.2 Vanjsko oglašavanje: billboard/city light ili jednakovrijedno",{"2":"3","14":"3","26":"3"}],["KV.3 Promotivne video snimke i objave na webu/društvenim mrežama",{"3":"1","5":"1","8":"1","11":"1","15":"1","17":"1","20":"1","23":"1","27":"1","29":"1","32":"1","35":"1"}],["KV.4 Roll-up banner projekta – nabava i izlaganje",{"1":"1"}],["KV.5 Promotivni plakati projekta – izrada/postavljanje po lokacijama",{"2":"50","14":"50","26":"50"}],["KV.6 Mjesečni kalendari događanja i najave aktivnosti",{"1":"K","2":"K","3":"K","4":"K","5":"K","6":"K","7":"K","8":"K","9":"K","10":"K","11":"K","12":"K","13":"K","14":"K","15":"K","16":"K","17":"K","18":"K","19":"K","20":"K","21":"K","22":"K","23":"K","24":"K","25":"K","26":"K","27":"K","28":"K","29":"K","30":"K","31":"K","32":"K","33":"K","34":"K","35":"K","36":"K"}],["UPRAVLJANJE PROJEKTOM I ADMINISTRACIJA",{}],["UP.1 Zapošljavanje/angažman koordinatora i odluke o postotku rada po aktivnostima",{"1":"X"}],["UP.2 Operativna provedba, koordinacija partnera, administracija, praćenje aktivnosti i dokaza",{"1":"X","2":"X","3":"X","4":"X","5":"X","6":"X","7":"X","8":"X","9":"X","10":"X","11":"X","12":"X","13":"X","14":"X","15":"X","16":"X","17":"X","18":"X","19":"X","20":"X","21":"X","22":"X","23":"X","24":"X","25":"X","26":"X","27":"X","28":"X","29":"X","30":"X","31":"X","32":"X","33":"X","34":"X","35":"X","36":"X"}],["UP.3 Partnerski/projektni sastanci i zapisnici",{"1":"1","4":"1","7":"1","10":"1","13":"1","16":"1","19":"1","22":"1","25":"1","28":"1","31":"1","34":"1","36":"1"}],["UP.4 Izrada i predaja ZNS-ova / zahtjeva za plaćanje prema tijeku novca",{"5":"ZNS1","8":"ZNS2","11":"ZNS3","14":"ZNS4","17":"ZNS5","20":"ZNS6","23":"ZNS7","26":"ZNS8","29":"ZNS9","32":"ZNS10","35":"ZNS11","36":"ZNS12"}],["UP.5 Priprema završnog izvješća, kontrola pokazatelja i arhiviranje dokumentacije",{"36":"X"}],["HORIZONTALNA NAČELA",{}],["HN.1 Jednake mogućnosti i pristupačnost: upiti o potrebama prilagodbe, pristupačni prostori, materijali velikim slovima/audio gdje je potrebno",{"1":"X","2":"X","3":"X","4":"X","5":"X","6":"X","7":"X","8":"X","9":"X","10":"X","11":"X","12":"X","13":"X","14":"X","15":"X","16":"X","17":"X","18":"X","19":"X","20":"X","21":"X","22":"X","23":"X","24":"X","25":"X","26":"X","27":"X","28":"X","29":"X","30":"X","31":"X","32":"X","33":"X","34":"X","35":"X","36":"X"}],["HN.2 Rodna ravnopravnost i nediskriminacija: rodno osjetljiv jezik i praćenje sudjelovanja po spolu",{"1":"X","2":"X","3":"X","4":"X","5":"X","6":"X","7":"X","8":"X","9":"X","10":"X","11":"X","12":"X","13":"X","14":"X","15":"X","16":"X","17":"X","18":"X","19":"X","20":"X","21":"X","22":"X","23":"X","24":"X","25":"X","26":"X","27":"X","28":"X","29":"X","30":"X","31":"X","32":"X","33":"X","34":"X","35":"X","36":"X"}],["HN.3 Zelena i digitalna načela: manje papira, digitalna arhiva, odvojeno prikupljanje otpada, edukacija o održivosti",{"1":"X","2":"X","3":"X","4":"X","5":"X","6":"X","7":"X","8":"X","9":"X","10":"X","11":"X","12":"X","13":"X","14":"X","15":"X","16":"X","17":"X","18":"X","19":"X","20":"X","21":"X","22":"X","23":"X","24":"X","25":"X","26":"X","27":"X","28":"X","29":"X","30":"X","31":"X","32":"X","33":"X","34":"X","35":"X","36":"X"}]];
+var POKAZATELJI = [
+  { id: 'R1', naziv: 'SF.3.4.08.06-01 Broj OCD-a podržanih u okviru PDP-a', cilj: 1, dokaz: 'Ugovor o dodjeli bespovratnih sredstava' },
+  { id: 'R2', naziv: 'SF.3.4.08.06-02 Broj starijih osoba i/ili umirovljenika uključenih u Program aktivnog starenja', cilj: 303, dokaz: 'Potpisne liste + dokumentacija o pripadnosti ciljnoj skupini' },
+  { id: 'I1', naziv: 'Mjerljivi ishod 1 · Provedene edukacije za provedbu PAS-a (A1)', cilj: 7, dokaz: 'Program izobrazbe, potvrde o sudjelovanju, ugovori/volontiranje', sifra: 'A1' },
+  { id: 'I2', naziv: 'Mjerljivi ishod 2 · Održane aktivnosti Programa aktivnog starenja (A2)', cilj: 1770, dokaz: 'Fotografije, video min. 1 min, potpisne liste, mjesečni kalendar', sifra: 'A2' },
+  { id: 'I3', naziv: 'Mjerljivi ishod 3 · Pohađana individualna stručna savjetovanja (A3)', cilj: 396, dokaz: 'Potpisna lista korisnika i izvještaj o savjetovanju', sifra: 'A3', poOsobi: true },
+  { id: 'I4', naziv: 'Mjerljivi ishod 4 · Pružena informiranja putem info kutka (A4)', cilj: 350, dokaz: 'Objava otvaranja info kutka, upitnici, potpisne liste, izvještaj', sifra: 'A4', poOsobi: true },
+  { id: 'I5', naziv: 'Mjerljivi ishod 5 · Provedene aktivnosti promocije projekta (KV)', cilj: 67, dokaz: 'Poveznice, snimke zaslona, fotografije, računi' }
+];
+/** Projektni mjesec (1–36) za datum: mjesec traje od 25. do 24. */
+function projMjesec(s) {
+  var p = s.split('-'), g = +p[0], m = +p[1], d = +p[2];
+  var n = (g - 2026) * 12 + (m - 5) + (d >= 25 ? 1 : 0);
+  return n;
+}
+function pmRaspon(n) {
+  var od = new Date(2026, 4 + n - 1, 25), doo = new Date(2026, 4 + n, 24);
+  return od.getDate() + '.' + (od.getMonth() + 1) + '.' + od.getFullYear() + '. – ' + doo.getDate() + '.' + (doo.getMonth() + 1) + '.' + doo.getFullYear() + '.';
+}
+function pmKratko(n) { var od = new Date(2026, 4 + n - 1, 25); return MJ[od.getMonth()].slice(0, 3) + ' ' + String(od.getFullYear()).slice(2); }
+/** ZNS prema razdoblju troška (Plan ZNS: ZNS1 = 5–7/2026, ZNS2 = 8–10/2026 …). */
+function znsZaDatum(s) { var p = s.split('-'), i = (+p[0] - 2026) * 12 + (+p[1] - 5); return i < 0 ? '' : 'ZNS' + (Math.floor(i / 3) + 1); }
+
+/** Iz sirovih podataka složi sve brojke za Hodogram i Pregled. */
+function pregledIzracun(P) {
+  var dan = P.danas || danas();
+  var T = {}; P.termini.forEach(function (t) { t.odrzan = t.d <= dan; T[t.k] = t; });
+  var K = {}; P.korisnici.forEach(function (k) { K[k.id] = k; k.sud = []; });
+  var vid = {}, sud = [];
+  P.prijave.forEach(function (p) {
+    var t = T[p[0]]; if (!t) return;
+    var kl = p[0] + '|' + p[1]; if (vid[kl]) return; vid[kl] = 1;
+    sud.push({ t: t, kid: p[1] });
+    (t.polaznici = t.polaznici || []).push(p[1]);
+    if (K[p[1]]) K[p[1]].sud.push(t);
+  });
+  P.korisnici.forEach(function (k) {
+    k.sud.sort(function (a, b) { return a.d.localeCompare(b.d); });
+    k.prvi = k.sud.length ? k.sud[0].d : '';
+    k.znsIzr = k.prvi ? znsZaDatum(k.prvi) : '';
+  });
+  var odrzani = P.termini.filter(function (t) { return t.odrzan; });
+  var poSifri = function (pref) { return odrzani.filter(function (t) { return String(t.s).indexOf(pref) === 0; }); };
+  var sudPo = function (pref) { return sud.filter(function (x) { return x.t.odrzan && String(x.t.s).indexOf(pref) === 0; }); };
+  var a2osobe = {}; sudPo('A2').forEach(function (x) { a2osobe[x.kid] = 1; });
+  var sveOsobe = {}; sud.forEach(function (x) { if (x.t.odrzan) sveOsobe[x.kid] = 1; });
+  var kvBroj = (P.kv || []).filter(function (z) { return z.kat !== 'sastanak' && !/^ra[cč]un/i.test(z.n || ''); }).length;
+  var pmDanas = Math.max(1, Math.min(36, projMjesec(dan)));
+  var udio = Math.min(1, pmDanas / 36);
+  var vrijednost = {
+    R1: 1, R2: Object.keys(a2osobe).length || Object.keys(sveOsobe).length,
+    I1: poSifri('A1').length, I2: poSifri('A2').length, I3: sudPo('A3').length || poSifri('A3').length,
+    I4: sudPo('A4').length || poSifri('A4').length, I5: kvBroj
+  };
+  // plan iz hodograma do danas (zbroj brojčanih oznaka po skupini)
+  var planDo = function (pref, doMj) {
+    var s = 0; HODOGRAM.forEach(function (r) {
+      if (r[0].indexOf(pref + '.') !== 0) return;
+      Object.keys(r[1]).forEach(function (m) { if (+m <= doMj && /^\d+$/.test(r[1][m])) s += +r[1][m]; });
+    }); return s;
+  };
+  var pok = POKAZATELJI.map(function (p) {
+    var v = vrijednost[p.id] || 0;
+    var ocek = p.id === 'R1' ? 1 : p.id === 'I1' ? (pmDanas >= 3 ? 7 : Math.ceil(7 * pmDanas / 3)) : Math.ceil(p.cilj * udio);
+    return { p: p, v: v, post: Math.round(v / p.cilj * 1000) / 10, ocek: ocek, uRoku: v >= ocek };
+  });
+  // ostvareno po projektnom mjesecu i skupini
+  var ostv = {};
+  odrzani.forEach(function (t) { var m = projMjesec(t.d), g = String(t.s).split('.')[0]; ostv[g + '|' + m] = (ostv[g + '|' + m] || 0) + 1; });
+  return { P: P, T: T, K: K, sud: sud, odrzani: odrzani, pok: pok, pmDanas: pmDanas, ostv: ostv, planDo: planDo, dan: dan };
+}
+function ucitajPregled(svjeze) { return sKesom('pregled', 'pregled', [], svjeze).then(function (P) { S.pregled = pregledIzracun(P); return S.pregled; }); }
+function pregledGreska(el, e) {
+  el.innerHTML = '<div class="obavijest warn">' + esc(/Nepoznata akcija/.test(e.message) ? 'Brojke će se prikazati kad se objavi nova verzija API-ja (Apps Script).' : e.message) + '</div>';
+}
+
+function pocetnaHodogram() {
+  S.naPromjenuReda = null;
+  $('#app').innerHTML = '<div class="naslovTaba"><h2>Hodogram i pokazatelji</h2></div>' +
+    '<p class="muted small">Prema hodogramu aktivnosti iz prijavnog obrasca (Projektna tablica, list „Hodogram”). Projekt traje 36 mjeseci od 25. 5. 2026.; mjesec provedbe traje od 25. do 24.</p>' +
+    '<div id="hSad"><div class="spinner"></div></div>';
+  var crtaj = function (R) {
+    if (S.tab !== 'hodogram' || !$('#hSad')) return;
+    var h = [], ln = function (st, t) { return '<span class="chip ' + st + '">' + t + '</span>'; };
+    h.push('<div class="card"><h3>Sada: ' + R.pmDanas + '. mjesec provedbe</h3><p>' + esc(pmRaspon(R.pmDanas)) + '</p>' +
+      '<div class="bar"><i style="width:' + Math.round(R.pmDanas / 36 * 100) + '%"></i></div><p class="muted small">Prošlo ' + Math.round(R.pmDanas / 36 * 100) + ' % trajanja projekta · ' + (36 - R.pmDanas) + ' mj. do kraja.</p></div>');
+    // pokazatelji
+    h.push('<div class="card"><h3>Postotak ostvarenosti pokazatelja</h3>' + R.pok.map(function (x) {
+      var w = Math.min(100, x.post);
+      return '<div class="cilj"><span><b>' + esc(x.p.naziv) + '</b><br><span class="muted small">Cilj: ' + x.p.cilj + ' · Očekivano do danas: ' + x.ocek + ' · Dokaz: ' + esc(x.p.dokaz) + '</span></span>' +
+        '<b class="hPost">' + String(x.post).replace('.', ',') + ' %</b><div class="bar" style="grid-column:1/3"><i style="width:' + w + '%"></i></div>' +
+        '<div class="chips" style="grid-column:1/3">' + ln('', x.v + ' / ' + x.p.cilj) + (x.v >= x.p.cilj ? ln('ok', 'Ostvareno') : x.uRoku ? ln('gold', 'U roku') : ln('warn', 'Ispod plana (−' + (x.ocek - x.v) + ')')) + '</div></div>';
+    }).join('') + '<p class="muted small">Brojevi iz aplikacije: održani termini iz kalendara (do danas), sudionici s potpisnih lista / prijava (list „Prijave”), elementi vidljivosti (list „Vidljivost”, bez računa i sastanaka). A1 se broji samo ako su edukacije upisane u kalendar.</p></div>');
+    // plan vs ostvareno po skupinama
+    var skupine = [['A2', 'Program aktivnog starenja'], ['A3', 'Individualna savjetovanja'], ['A4', 'Info kutci']];
+    h.push('<div class="card"><h3>Plan iz hodograma i ostvareno do danas</h3>' + skupine.map(function (s) {
+      var plan = R.planDo(s[0], R.pmDanas), ost = 0;
+      for (var m = 1; m <= R.pmDanas; m++) ost += R.ostv[s[0] + '|' + m] || 0;
+      var post = plan ? Math.round(ost / plan * 100) : 0;
+      return '<div class="cilj"><span><b>' + s[0] + ' ' + esc(s[1]) + '</b><br><span class="muted small">Planirano termina do ' + R.pmDanas + '. mj.: ' + plan + ' · održano: ' + ost + '</span></span><b>' + post + ' %</b>' +
+        '<div class="bar" style="grid-column:1/3"><i style="width:' + Math.min(100, post) + '%"></i></div></div>';
+    }).join('') + '</div>');
+    // gantt
+    var mj = []; for (var i = 1; i <= 36; i++) mj.push(i);
+    var redak = function (r) {
+      var naziv = r[0], skup = !/^[A-Z]{1,2}\d?\.\d/.test(naziv) && !/^(KV|UP|HN)\.\d/.test(naziv);
+      var g = (naziv.match(/^(A\d)/) || [])[1];
+      var celije = mj.map(function (m) {
+        var v = r[1][m], cls = (m === R.pmDanas ? ' sad' : '') + (m < R.pmDanas ? ' prosl' : '');
+        if (skup) { var o = g ? R.ostv[g + '|' + m] : 0; return '<td class="g' + cls + '">' + (o ? '<span class="ostv">' + o + '</span>' : '') + '</td>'; }
+        return '<td class="' + cls + (v ? ' on' : '') + '">' + (v ? esc(v === 'X' ? '' : v) : '') + '</td>';
+      }).join('');
+      return '<tr class="' + (skup ? 'grp' : '') + '"><th title="' + esc(naziv) + '">' + esc(naziv) + '</th>' + celije + '</tr>';
+    };
+    h.push('<div class="card"><h3>Hodogram aktivnosti (mjeseci 1–36)</h3><p class="muted small">Zlatno = planirano (broj = planirani termini/sati/komadi), plavi broj u retku skupine = održani termini iz kalendara. Uokviren je tekući mjesec.</p>' +
+      '<div class="hodWrap"><table class="hod"><thead><tr><th>Aktivnost / mjesec</th>' + mj.map(function (m) {
+        return '<th class="' + (m === R.pmDanas ? 'sad' : '') + '" title="' + esc(pmRaspon(m)) + '">' + m + '<br><span>' + esc(pmKratko(m)) + '</span></th>';
+      }).join('') + '</tr></thead><tbody>' + HODOGRAM.map(redak).join('') + '</tbody></table></div></div>');
+    $('#hSad').innerHTML = h.join('');
+    var w = $('.hodWrap'), sad = $('.hod thead th.sad'); if (w && sad) w.scrollLeft = Math.max(0, sad.offsetLeft - 260);
+  };
+  S.osvjezi = function () { if (S.pregled) crtaj(S.pregled); };
+  ucitajPregled(true).then(crtaj).catch(function (e) { if ($('#hSad')) pregledGreska($('#hSad'), e); });
+}
+
+/* ═══ 6. PREGLED (dashboard) ════════════════════════════════════════ */
+function pocetnaPregled() {
+  S.naPromjenuReda = null;
+  S.pgPrikaz = S.pgPrikaz || 'radionice';
+  $('#app').innerHTML = '<div class="naslovTaba"><h2>Pregled evidencije</h2></div><div id="pgSad"><div class="spinner"></div></div>';
+  ucitajPregled(true).then(function (R) { if (S.tab === 'pregled') pregledCrtaj(R); }).catch(function (e) { if ($('#pgSad')) pregledGreska($('#pgSad'), e); });
+  S.osvjezi = function () { if (S.pregled && S.tab === 'pregled') pregledCrtaj(S.pregled); };
+}
+function pregledCrtaj(R) {
+  var el = $('#pgSad'); if (!el) return;
+  var aktivni = R.P.korisnici.filter(function (k) { return k.sud.some(function (t) { return t.odrzan; }); });
+  var potpuno = R.odrzani.filter(function (t) { return /POTPUNO/i.test(t.st) && !/NEPOTPUNO/i.test(t.st); }).length;
+  var sudOdr = R.sud.filter(function (x) { return x.t.odrzan; }).length;
+  var zns = {}; aktivni.forEach(function (k) { var z = k.zns || k.znsIzr || '–'; zns[z] = (zns[z] || 0) + 1; });
+  var kpi = function (br, t) { return '<div class="kpi"><b>' + br + '</b><span>' + t + '</span></div>'; };
+  var h = '<div class="kpis">' + kpi(R.odrzani.length, 'održanih radionica / termina') + kpi(potpuno, 'potpuno dokumentiranih') +
+    kpi(sudOdr, 'sudjelovanja (potpisi)') + kpi(aktivni.length, 'različitih polaznika') + kpi(R.P.korisnici.length, 'korisnika u bazi') + kpi(R.pmDanas + '/36', 'mjesec provedbe') + '</div>';
+  h += '<div class="card"><h3>Polaznici po ZNS-u</h3><div class="chips">' + Object.keys(zns).sort(function (a, b) { return (parseInt(a.replace(/\D/g, '')) || 99) - (parseInt(b.replace(/\D/g, '')) || 99); }).map(function (z) {
+    return '<span class="chip gold">' + esc(z) + ': ' + zns[z] + '</span>'; }).join('') + '</div><p class="muted small">' +
+    (R.P.znsStupci && R.P.znsStupci.length ? 'Iz stupca „' + esc(R.P.znsStupci.join('”, „')) + '” lista Korisnici; gdje je prazno, ZNS je izračunat po prvom sudjelovanju.' :
+      'ZNS je izračunat po datumu prvog sudjelovanja (Plan ZNS: ZNS1 = 5–7/2026, ZNS2 = 8–10/2026, ZNS3 = 11/2026–1/2027 …). Za stvarni upis dodajte stupac „ZNS” u list Korisnici.') + '</p></div>';
+  h += '<div class="seg" id="pgSeg">' + [['radionice', 'Radionice'], ['polaznici', 'Polaznici'], ['aktivnosti', 'Po aktivnosti'], ['mjeseci', 'Po mjesecu']].map(function (x) {
+    return '<button type="button" data-pg="' + x[0] + '" class="' + (S.pgPrikaz === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' +
+    '<input type="search" id="pgTrazi" class="trazi" placeholder="Traži (ime, aktivnost, lokacija, datum, ZNS)…" value="' + esc(S.pgTrazi || '') + '"><div id="pgLista"></div>';
+  el.innerHTML = h;
+  $$('#pgSeg button').forEach(function (b) { b.onclick = function () { S.pgPrikaz = b.getAttribute('data-pg'); pregledCrtaj(R); }; });
+  $('#pgTrazi').oninput = function () { S.pgTrazi = this.value; pregledLista(R); };
+  pregledLista(R);
+}
+function pregledLista(R) {
+  var el = $('#pgLista'), q = norm(S.pgTrazi || ''), v = S.pgPrikaz, h = '';
+  var ime = function (id) { var k = R.K[id]; return k ? k.prezime + ' ' + k.ime : id; };
+  var odg = function (s) { return !q || q.split(/\s+/).every(function (w) { return norm(s).indexOf(w) >= 0; }); };
+  if (v === 'radionice') {
+    var lista = R.odrzani.slice().reverse().filter(function (t) { return odg([t.d, kratkiDatum(t.d), t.s, t.a, t.l, t.m, znsZaDatum(t.d)].join(' ')); });
+    h = '<ul class="popis pgL">' + lista.slice(0, 300).map(function (t) {
+      var n = (t.polaznici || []).length;
+      return '<li><details><summary><span class="ime"><b>' + esc(kratkiDatum(t.d) + t.d.slice(0, 4) + '. ' + (t.v || '')) + '</b> ' + esc(t.a) + '<br><span class="muted small">' + esc([t.s, t.l, t.m, znsZaDatum(t.d)].filter(Boolean).join(' · ')) + '</span></span>' +
+        '<span class="chip ' + (n ? 'ok' : 'warn') + '">' + n + ' pol.</span>' + (t.st ? '<span class="chip ' + (/NEPOTPUNO/i.test(t.st) ? 'warn' : 'ok') + '">' + esc(t.st.toLowerCase()) + '</span>' : '<span class="chip">bez evidencije</span>') + '</summary>' +
+        (n ? '<ol class="small">' + t.polaznici.map(ime).sort(function (a, b) { return a.localeCompare(b, 'hr'); }).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>' : '<p class="muted small">Nema upisanih polaznika (potpisna lista nije obrađena).</p>') + '</details></li>';
+    }).join('') + '</ul>' + (lista.length > 300 ? '<p class="muted small">Prikazano 300 od ' + lista.length + ' – suzite pretragu.</p>' : '');
+    if (!lista.length) h = '<p class="prazno">Nema rezultata.</p>';
+  } else if (v === 'polaznici') {
+    var ko = R.P.korisnici.filter(function (k) { return odg([k.ime, k.prezime, k.naselje, k.id, k.zns, k.znsIzr].join(' ')); })
+      .sort(function (a, b) { return b.sud.length - a.sud.length || (a.prezime + a.ime).localeCompare(b.prezime + b.ime, 'hr'); });
+    h = '<ul class="popis pgL">' + ko.slice(0, 300).map(function (k) {
+      return '<li><details><summary><span class="ime"><b>' + esc(k.prezime + ' ' + k.ime) + '</b><br><span class="muted small">' + esc([k.id, k.naselje, k.god ? 'god. ' + k.god : '', k.prvi ? 'prvi put ' + kratkiDatum(k.prvi) + k.prvi.slice(0, 4) + '.' : ''].filter(Boolean).join(' · ')) + '</span></span>' +
+        '<span class="chip ' + (k.sud.length ? 'ok' : '') + '">' + k.sud.length + ' rad.</span>' + (k.zns ? '<span class="chip gold">' + esc(k.zns) + '</span>' : k.znsIzr ? '<span class="chip">' + esc(k.znsIzr) + ' (izr.)</span>' : '') + '</summary>' +
+        (k.sud.length ? '<ul class="small">' + k.sud.map(function (t) { return '<li>' + esc(kratkiDatum(t.d) + t.d.slice(0, 4) + '. · ' + t.a + ' · ' + t.l + (t.odrzan ? '' : ' (najava)')) + '</li>'; }).join('') + '</ul>' : '<p class="muted small">Još nije sudjelovao/la.</p>') + '</details></li>';
+    }).join('') + '</ul>' + (ko.length > 300 ? '<p class="muted small">Prikazano 300 od ' + ko.length + '.</p>' : '');
+  } else if (v === 'aktivnosti') {
+    var g = {};
+    R.odrzani.forEach(function (t) { var k = t.s + '|' + t.a; var x = g[k] = g[k] || { s: t.s, a: t.a, n: 0, p: 0, lok: {}, osobe: {} }; x.n++; x.p += (t.polaznici || []).length; x.lok[t.l] = (x.lok[t.l] || 0) + 1; (t.polaznici || []).forEach(function (id) { x.osobe[id] = 1; }); });
+    var arr = Object.keys(g).map(function (k) { return g[k]; }).filter(function (x) { return odg(x.s + ' ' + x.a + ' ' + Object.keys(x.lok).join(' ')); }).sort(function (a, b) { return a.s.localeCompare(b.s) || b.n - a.n; });
+    h = '<div class="tabWrap"><table class="pgT"><thead><tr><th>Šifra</th><th>Aktivnost</th><th>Termina</th><th>Sudjelovanja</th><th>Osoba</th><th>Lokacije</th></tr></thead><tbody>' + arr.map(function (x) {
+      return '<tr><td>' + esc(x.s) + '</td><td>' + esc(x.a) + '</td><td>' + x.n + '</td><td>' + x.p + '</td><td>' + Object.keys(x.osobe).length + '</td><td class="small">' + esc(Object.keys(x.lok).map(function (l) { return l + ' ' + x.lok[l]; }).join(', ')) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  } else {
+    var m = {};
+    R.odrzani.forEach(function (t) { var k = projMjesec(t.d); var x = m[k] = m[k] || { n: 0, p: 0, o: {}, nove: 0 }; x.n++; x.p += (t.polaznici || []).length; (t.polaznici || []).forEach(function (id) { x.o[id] = 1; }); });
+    R.P.korisnici.forEach(function (k) { if (k.prvi && k.prvi <= R.dan) { var x = m[projMjesec(k.prvi)]; if (x) x.nove++; } });
+    var max = 1; Object.keys(m).forEach(function (k) { max = Math.max(max, m[k].n); });
+    h = '<div class="tabWrap"><table class="pgT"><thead><tr><th>Mj.</th><th>Razdoblje</th><th>ZNS</th><th>Termina</th><th></th><th>Sudjelovanja</th><th>Osoba</th><th>Novih</th></tr></thead><tbody>' +
+      Object.keys(m).sort(function (a, b) { return a - b; }).map(function (k) { var x = m[k], od = new Date(2026, 4 + (+k) - 1, 25);
+        return '<tr><td>' + k + '.</td><td class="small">' + esc(pmRaspon(+k)) + '</td><td>' + esc(znsZaDatum(ymd(od))) + '</td><td>' + x.n + '</td><td style="min-width:90px"><div class="bar"><i style="width:' + Math.round(x.n / max * 100) + '%"></i></div></td><td>' + x.p + '</td><td>' + Object.keys(x.o).length + '</td><td>' + x.nove + '</td></tr>'; }).join('') +
+      '</tbody></table></div><p class="muted small">ZNS stupac pokazuje u koji ZNS ulazi mjesec prema Planu ZNS (razdoblja po kalendarskim mjesecima).</p>';
+  }
+  el.innerHTML = h;
 }
 
 /* ═══ 2. KOMUNIKACIJA I VIDLJIVOST ═══════════════════════════════════ */
