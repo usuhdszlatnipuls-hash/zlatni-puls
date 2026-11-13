@@ -3,7 +3,7 @@
    Provedba aktivnosti · Komunikacija i vidljivost · Prijave na aktivnosti
    Sve se sprema na mobitel i šalje na Drive kad ima interneta.
    ═══════════════════════════════════════════════════════════════════════ */
-var VERZIJA_APP = '2026-11-13e';
+var VERZIJA_APP = '2026-11-13f';
 var DANI = ['nedjelja', 'ponedjeljak', 'utorak', 'srijeda', 'četvrtak', 'petak', 'subota'];
 var MJ = ['siječanj', 'veljača', 'ožujak', 'travanj', 'svibanj', 'lipanj', 'srpanj', 'kolovoz', 'rujan', 'listopad', 'studeni', 'prosinac'];
 var MJ_GEN = ['siječnja', 'veljače', 'ožujka', 'travnja', 'svibnja', 'lipnja', 'srpnja', 'kolovoza', 'rujna', 'listopada', 'studenoga', 'prosinca'];
@@ -1463,11 +1463,12 @@ function prijavaOsobe() {
     '<div class="dvoje" style="margin-top:8px"><div><input class="unos" id="poDR" inputmode="numeric" placeholder="Datum rođenja (dd.mm.gggg.)"></div><div><input class="unos" id="poOib" inputmode="numeric" maxlength="11" placeholder="OIB"></div></div>' +
     '<div class="dvoje" style="margin-top:8px"><div><input class="unos" id="poAdr" placeholder="Adresa (ulica i broj)"></div><div><input class="unos" id="poNas" placeholder="Naselje"></div></div>' +
     '<div style="margin-top:8px"><select class="unos" id="poSpol"><option value="">Spol</option><option value="Z">Žensko</option><option value="M">Muško</option></select></div>' +
-    '<p class="muted small">Za novu osobu odmah se izrađuju ulazni (O1) i izlazni (O2) obrazac u njezinu mapu (Drive › Zlatni puls – korisnici › NOVI KORISNICI ZNS… › redni broj).</p>' +
+    '<p class="muted small">Za novu osobu odmah se izrađuju ulazni (O1), izlazni (O2) obrazac i suglasnost u njezinu mapu (Drive › Zlatni puls – korisnici › NOVI KORISNICI ZNS… › redni broj).</p>' +
     '<div class="btnrow one"><button class="btn ghost" id="poNovaOK">' + I.plus + 'Koristi ovu osobu</button></div></details>' +
     '<div style="margin-top:12px"><label class="polje" for="poTel">Broj telefona</label><input class="unos" id="poTel" type="tel" inputmode="tel" autocomplete="off" placeholder="npr. 091 234 5678"></div>' +
     '<div style="margin-top:12px"><b class="small">Osobna iskaznica</b> <span class="muted small">– prednja i stražnja strana (fotografija, slika ili PDF). Sprema se u povjerljivu mapu, odvojeno od materijala provedbe.</span>' +
-    '<div class="btnrow"><button class="btn ghost" type="button" id="poOsK">' + I.foto + 'Fotografiraj</button><button class="btn ghost" type="button" id="poOsU">' + I.galerija + 'Učitaj</button></div><div class="chips" id="poOsL"></div></div></div>' +
+    '<div class="btnrow"><button class="btn ghost" type="button" id="poOsK">' + I.foto + 'Fotografiraj</button><button class="btn ghost" type="button" id="poOsU">' + I.galerija + 'Učitaj</button></div><div class="chips" id="poOsL"></div></div>' +
+    '<div class="btnrow one hidden" id="poObrW" style="margin-top:10px"><button class="btn ghost wrap" type="button" id="poObr">' + I.lista + 'Izradi / obnovi O1, O2 i suglasnost</button></div></div>' +
     '<div class="card"><h3>2. Datum prijave</h3><div class="dvoje"><div><label class="polje" for="poDatum">Datum</label><input class="unos" type="date" id="poDatum"></div>' +
     '<div><label class="polje" for="poVrij">Vrijeme</label><input class="unos" type="time" id="poVrij"></div></div></div>' +
     '<div class="card"><h3>3. Termini</h3><div class="mjesec"><button class="iconbtn" id="poPrev">' + I.lijevo + '</button><b id="poMj"></b><button class="iconbtn" id="poNext">' + I.desno + '</button></div>' +
@@ -1489,6 +1490,7 @@ function prijavaOsobe() {
     var o = P.osoba ? P.osoba.prezime + ' ' + P.osoba.ime + (P.osoba.god ? ' (' + P.osoba.god + ')' : '') : P.novi ? P.novi.prezime + ' ' + P.novi.ime + ' (nova)' : '';
     $('#poOsoba').innerHTML = o ? '<span>' + esc(o) + '<b id="poMakni">×</b></span>' : '<p class="muted small">Odaberite osobu.</p>';
     if ($('#poMakni')) $('#poMakni').onclick = function () { P.osoba = P.novi = null; crtajOsobu(); };
+    $('#poObrW').classList.toggle('hidden', !P.osoba);
     sazetak();
   }
   korisnici().then(function (lista) {
@@ -1518,6 +1520,14 @@ function prijavaOsobe() {
     $$('#poOsL [data-osx]').forEach(function (b) { b.onclick = function () { P.osobne.splice(+b.getAttribute('data-osx'), 1); crtajOsobne(); }; });
     sazetak();
   }
+  $('#poObr').onclick = function () {
+    if (!P.osoba) return;
+    var o = P.osoba;
+    if (!confirm('Izraditi ulazni (O1), izlazni (O2) obrazac i suglasnost za ' + o.prezime + ' ' + o.ime + ' s podacima iz baze?\n\nSpremaju se u mapu osobe na Driveu (Zlatni puls – korisnici). Ako osoba još nema mapu u aplikaciji, dobit će novu mapu u NOVI KORISNICI ZNS… prema datumu ulaska. Postojeći obrasci u toj mapi zamijenit će se novima.')) return;
+    ZP.uRed({ tip: 'obrasci', p: { idKorisnika: o.id }, ime: 'Obrasci O1, O2, suglasnost · ' + o.prezime + ' ' + o.ime }).then(function () {
+      toast(naMrezi() ? 'Izrađujem obrasce za ' + o.prezime + ' ' + o.ime + '…' : 'Spremljeno – obrasci će se izraditi kad bude interneta.', 3500);
+    }).catch(greska);
+  };
   $('#poOsK').onclick = function () { odaberi('image/*', true, false, dodajOsobne); };
   $('#poOsU').onclick = function () { odaberi('image/*,application/pdf', false, true, dodajOsobne); };
   $('#poNovaOK').onclick = function () {
@@ -1607,11 +1617,12 @@ function pocetnaSlanje() {
         if (q.tip === 'vidljivost') return 'Vidljivost · ' + (q.z.naslov || q.z.organizacija || q.z.kategorija) + ' (' + (q.datoteke || []).length + ' dat.)';
         if (q.tip === 'prijave') return 'Prijave · ' + q.ime;
         if (q.tip === 'prijavaOsobe') return 'Prijava osobe · ' + q.ime;
+        if (q.tip === 'obrasci') return q.ime;
         return q.ime;
       };
       var html = '<h2>Slanje</h2><div class="card"><div class="naslovTaba"><h3>' + (ceka.length ? 'Čeka slanje: ' + ceka.length : 'Sve je poslano ✓') + '</h3></div>' +
         (!naMrezi() ? '<div class="obavijest warn">Mobitel nije na internetu. Sve je sigurno spremljeno na mobitelu i poslat će se samo čim se spojite.</div>' : '') +
-        (red.length ? '<ul class="popis">' + red.slice(0, 40).map(function (q) { q.naziv = opis(q); return stavkaRedaHtml(q.tip === 'prijave' || q.tip === 'prijavaOsobe' ? I.lista : q.vrsta === 'video' ? I.video : I.foto, q); }).join('') + '</ul>' : '') +
+        (red.length ? '<ul class="popis">' + red.slice(0, 40).map(function (q) { q.naziv = opis(q); return stavkaRedaHtml(q.tip === 'prijave' || q.tip === 'prijavaOsobe' || q.tip === 'obrasci' ? I.lista : q.vrsta === 'video' ? I.video : I.foto, q); }).join('') + '</ul>' : '') +
         '<div class="btnrow one"><button class="btn primary" id="sSada">Pošalji sada</button></div>' +
         (pr ? '<p class="muted small">Zauzeto na mobitelu: ' + mb(pr.usage || 0) + '</p>' : '') + '</div>';
       html += '<div class="card"><h3>Povezivanje s Driveom</h3>' +
